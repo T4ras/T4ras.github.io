@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Локальный симулятор для ведущего игры «Новый сенат Республики»">
   <title>Новый сенат Республики</title>
-  <link rel="stylesheet" href="./style.css?v=ffdb630213ac">
+  <link rel="stylesheet" href="./style.css?v=cedda2a79675">
   <script defer src="./data.js?v=a1d784bd5263"></script>
   <script defer src="./catalog.js?v=62d7a181ec51"></script>
   <script defer src="./crises.js?v=996662a63ceb"></script>
@@ -16,23 +16,19 @@
 <body>
   <header class="masthead">
     <div class="frame mast-row">
-      <div class="identity">
-        <span class="insignia" aria-hidden="true"><i></i></span>
-        <div><h1>Новый сенат <strong>Республики</strong></h1><p>Пульт ведущего</p></div>
-      </div>
+      <nav class="navigation" aria-label="Этапы игры">
+        <a href="#senate">Зал Сената</a>
+        <a href="#bureaus">Коалиция и Бюро</a>
+        <a href="#crisis">Кризисы</a>
+        <a href="#campaign">Кампания и выборы</a>
+        <a href="#board">Показатели</a>
+        <a href="#statistics">Статистика</a>
+      </nav>
       <div class="mast-actions">
         <div id="session" class="session"></div>
         <a class="saves-link" href="#saves">Сохранения</a>
       </div>
     </div>
-    <nav class="frame navigation" aria-label="Этапы игры">
-      <a href="#senate">Зал Сената</a>
-      <a href="#bureaus">Коалиция и Бюро</a>
-      <a href="#crisis">Кризисы</a>
-      <a href="#campaign">Кампания и выборы</a>
-      <a href="#board">Показатели</a>
-      <a href="#statistics">Статистика</a>
-    </nav>
   </header>
   <main class="frame">
     <section id="indicators" class="indicators" aria-label="Показатели Республики"></section>
