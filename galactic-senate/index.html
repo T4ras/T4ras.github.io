@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Локальный симулятор для ведущего игры «Новый сенат Республики»">
+  <title>Новый сенат Республики</title>
+  <link rel="stylesheet" href="./style.css">
+  <script defer src="./data.js"></script>
+  <script defer src="./catalog.js"></script>
+  <script defer src="./model.js"></script>
+  <script defer src="./saves.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="frame mast-row">
+      <div class="identity">
+        <span class="insignia" aria-hidden="true"><i></i></span>
+        <div><h1>Новый сенат <strong>Республики</strong></h1><p>Пульт ведущего</p></div>
+      </div>
+      <div class="mast-actions">
+        <div id="session" class="session"></div>
+        <a class="saves-link" href="#saves">Сохранения</a>
+      </div>
+    </div>
+    <nav class="frame navigation" aria-label="Этапы игры">
+      <a href="#senate">Зал Сената</a>
+      <a href="#bureaus">Коалиция и Бюро</a>
+      <a href="#crisis">Кризисы</a>
+      <a href="#campaign">Кампания и выборы</a>
+      <a href="#board">Показатели</a>
+      <a href="#statistics">Статистика</a>
+    </nav>
+  </header>
+  <main class="frame">
+    <section id="indicators" class="indicators" aria-label="Показатели Республики"></section>
+    <div id="notice" class="notice" role="status" hidden></div>
+    <section id="screen" aria-label="Экран симулятора"></section>
+  </main>
+  <footer class="frame footer">
+    <span id="save-status">Состояние партии сохраняется в этом браузере</span>
+    <a href="https://docs.google.com/document/d/1JJSZyiw3rPUyj4lOwQZ4SuBsn7_G-hccd7YjxajHjwM" target="_blank" rel="noopener">Гайдбук игры</a>
+  </footer>
+</body>
+</html>
