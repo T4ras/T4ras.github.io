@@ -3,7 +3,7 @@
 
   const { parties } = window.senateData;
   const model = window.senateModel;
-  const { partyIds, axes, axisLabels, constituencies, socialClasses, laws, policies, bureaus, crises, sum } = model;
+  const { partyIds, axisLabels, constituencies, socialClasses, laws, policies, bureaus, crises, sum } = model;
   const saves = window.senateSaves;
   const byId = id => document.getElementById(id);
   const all = (root, query) => [...root.querySelectorAll(query)];
@@ -21,6 +21,9 @@
   let archive;
   let storageReadable = true;
   let selectedBill = null;
+  let voteDraft = {};
+  const compositionParties = new Set();
+  const readingParties = new Set();
   let partyFilter = '';
   let campaignDraft = {};
   try {
@@ -63,6 +66,9 @@
   function useActiveSave(message) {
     state = archive.active.state;
     selectedBill = null;
+    voteDraft = {};
+    compositionParties.clear();
+    readingParties.clear();
     partyFilter = '';
     campaignDraft = {};
     announceSave(message);
@@ -107,36 +113,14 @@
   const effectsReadout = effects => readout(effects) || '<span class="muted">Без изменений показателей</span>';
   const changesReadout = changes => effectsReadout(Object.fromEntries(entries(changes).map(([id, { before, after }]) => [id, after - before])));
   const total = () => sum(Object.values(state.seats));
-  const heading = (title, text) => `<div class="page-title"><h2>${title}</h2><p>${text}</p></div>`;
   const fullPolicy = policy => policy.balance
     ? '<span class="chip">Бюджет к нулю и благосостояние: по текущему балансу</span>'
     : effectsReadout(Object.fromEntries(entries(policy.effects).map(([key, value]) => [key, value * 2])));
 
-  function metrics() {
-    byId('session').innerHTML = `<span>СОЗЫВ</span><b>${state.convocation}</b>`;
-    const metrics = ['budget', 'army', 'authority', 'welfare', 'autonomy'];
-    byId('indicators').innerHTML = metrics.map(id => {
-      const value = state.indicators[id];
-      return `<article class="metric"><span>${axisLabels[id]}</span>
-        <strong class="${signClass(value)}">${scaleLabel(value)}</strong></article>`;
-    }).join('');
-  }
-
-  function renderBoard() {
-    const titles = { republic: 'Республика', sector: 'Секторы', audience: 'Группы населения' };
-    screen.innerHTML = heading('Показатели Республики',
-      'Отсчёт от начала игры. Знак показывает рост или снижение самого показателя.') +
-      `<div class="board-grid">${entries(axes).map(([group, list]) =>
-        `<section class="panel"><h3>${titles[group]}</h3>
-          <dl class="axis-list">${entries(list).map(([id, label]) => {
-            const value = state.indicators[id];
-            return `<div><dt>${label}</dt><dd class="${signClass(value)}">${scaleLabel(value)}</dd></div>`;
-          }).join('')}</dl></section>`).join('')}</div>`;
-  }
-
-  function drawChamber() {
+  function drawChamber(selected) {
     const canvas = byId('chamber');
     const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     const rows = 14;
     const radii = Array.from({ length: rows }, (_, i) => 83 + i * 13.3);
     const rowTotal = sum(radii);
@@ -147,6 +131,7 @@
     }).sort((a, b) => b.angle - a.angle);
     let position = 0;
     for (const id of partyIds) {
+      ctx.globalAlpha = !selected.size || selected.has(id) ? 1 : .16;
       ctx.fillStyle = parties[id].color;
       for (let i = 0; i < state.seats[id]; i++) {
         const { radius, angle } = points[position++];
@@ -158,14 +143,47 @@
   }
 
   function chamber() {
-    return `<section class="panel chamber-panel">
-      <div class="panel-head"><div><h3>Места в Сенате</h3><p>Созыв № ${state.convocation}</p></div>
-      <span class="tag">${Math.floor(total() * 2 / 3) + 1} голосов для принятия</span></div>
-      <div class="chamber"><canvas id="chamber" width="1200" height="580" aria-label="Распределение мандатов полукругом"></canvas>
-      <div class="chamber-total"><strong>${format(total())}</strong><span>МАНДАТОВ</span></div></div>
-      <ul class="legend">${partyIds.map(id =>
-        `<li><span>${party(id)}</span><b>${state.seats[id]}</b></li>`).join('')}</ul>
-    </section>`;
+    return `<div class="chamber">
+      <canvas id="chamber" width="1200" height="580" aria-label="Распределение мандатов полукругом"></canvas>
+      <div class="chamber-total"><strong>${format(total())}</strong><span>МАНДАТОВ</span></div>
+    </div>`;
+  }
+
+  function partyCalculator(selected, voting = false) {
+    return `<div id="party-calculator" class="party-calculator">
+      <ul class="seat-list" aria-label="Партии и мандаты">${partyIds.map(id => `<li>
+        <button class="seat-choice" type="button" data-seat-party="${id}" aria-pressed="${selected.has(id)}">
+          <span>${party(id)}</span><b>${state.seats[id]}</b>
+        </button>
+        ${voting ? `<button type="button" class="vote-flag" data-party="${id}" data-position="abstain">
+          <span class="flag-banner" style="--party:${parties[id].color}" aria-hidden="true">${id === 'СГ' ? 'Г' : id}</span>
+          <strong class="flag-position">${flagLabels.abstain}</strong>
+        </button>` : ''}
+      </li>`).join('')}</ul>
+      <div class="seat-total"><span>Сумма мест</span>
+        <output id="seat-total" aria-live="polite">${format(sum([...selected].map(id => state.seats[id])))}</output>
+      </div>
+    </div>`;
+  }
+
+  function setupCalculator(selected) {
+    byId('party-calculator').addEventListener('click', event => {
+      const button = event.target.closest('[data-seat-party]');
+      if (!button) return;
+      const id = button.dataset.seatParty;
+      if (selected.has(id)) selected.delete(id);
+      else selected.add(id);
+      button.setAttribute('aria-pressed', String(selected.has(id)));
+      byId('seat-total').value = format(sum([...selected].map(id => state.seats[id])));
+      drawChamber(selected);
+    });
+    drawChamber(selected);
+  }
+
+  function renderComposition() {
+    screen.innerHTML = `<section class="panel chamber-panel composition"
+      aria-label="Композиция Сената">${chamber()}${partyCalculator(compositionParties)}</section>`;
+    setupCalculator(compositionParties);
   }
 
   function billSearch(law) {
@@ -262,54 +280,56 @@
     button.setAttribute('aria-label', `${parties[id].name}. ${flagLabels[position]}. Следующий голос: ${flagLabels[flagCycle[position]]}`);
   }
 
-  function voteForm(law) {
-    const reading = state.bills[law.id] === 'second' ? 2 : 1;
-    return `<form id="vote-form" class="panel" data-law-id="${law.id}">
-      <div class="panel-head"><div><h3 id="current-bill" tabindex="-1">${html(law.name)}</h3>
-      <p>${party(law.author)} · ${reading === 1 ? 'Первое' : 'Второе'} чтение</p></div></div>
-      <div class="stack">
+  function billCard(law) {
+    const reading = state.bills[law.id] === 'second' ? 'Второе' : 'Первое';
+    return `<section class="panel bill-card" aria-label="Законопроект на рассмотрении">
+      <h2 id="current-bill" tabindex="-1">${html(law.name)}</h2>
+      <p>${party(law.author)} · ${reading} чтение</p>
+      <details><summary>Описание законопроекта</summary>
         <p class="bill-summary">${html(law.description)}</p>
         <div class="chips">${effectsReadout(law.effects)}</div>
-        <details id="ballot" open><summary>Голоса партий</summary>
-          <p class="muted">Нажатие меняет позицию по кругу: воздержалась, за, против.</p>
-          <div class="vote-list flag-list">${partyIds.map(id =>
-            `<button type="button" class="vote-flag" data-party="${id}" data-position="abstain">
-              <span class="flag-banner" style="--party:${parties[id].color}" aria-hidden="true">${id === 'СГ' ? 'Г' : id}</span>
-              <span class="flag-party">${html(parties[id].name)}</span>
-              <span class="flag-seats">${state.seats[id]}</span>
-              <strong class="flag-position">${flagLabels.abstain}</strong>
-            </button>`).join('')}</div>
-        </details>
-        <div class="tally" id="tally" aria-live="polite"></div>
-        ${reading === 2 ? '<p class="muted">Во втором чтении у каждой партии должен быть голос за или против.</p>' : ''}
-        <button class="primary" type="submit">Зафиксировать голосование</button>
-      </div>
+      </details>
+    </section>`;
+  }
+
+  function voteForm(law) {
+    const reading = state.bills[law.id] === 'second' ? 2 : 1;
+    return `<form id="vote-form" class="panel stack">
+      ${partyCalculator(readingParties, true)}
+      <div class="tally" id="tally" aria-live="polite"></div>
+      ${reading === 2 ? '<p class="muted">Во втором чтении у каждой партии должен быть голос за или против.</p>' : ''}
+      <button class="primary" type="submit">Зафиксировать голосование</button>
     </form>`;
   }
 
-  function renderSenate() {
-    const law = laws.find(item => item.id === selectedBill);
-    const title = heading('Зал Сената', 'Найдите законопроект и отметьте позиции партий на голосовании.');
-    const noVote = '<section class="panel empty">Выберите законопроект из подсказок, чтобы открыть голосование.</section>';
-    if (state.snapElection) {
-      screen.innerHTML = title + '<div class="notice">Назначены досрочные выборы. Перейдите к избирательной кампании.</div>' + chamber();
-      drawChamber();
-      return;
-    }
-    screen.innerHTML = title + billSearch(law) + `<div class="split senate-layout">${chamber()}${law ? voteForm(law) : noVote}</div>`;
-    drawChamber();
-    function openLaw(id) {
+  function renderReading() {
+    const law = state.snapElection ? null : laws.find(item => item.id === selectedBill);
+    const search = state.snapElection
+      ? '<div class="notice">Назначены досрочные выборы. Перейдите к <a href="#campaign">избирательной кампании</a>.</div>'
+      : billSearch(law);
+    const chart = `<section class="panel chamber-panel">
+      <p class="reading-threshold"><span class="tag">${Math.floor(total() * 2 / 3) + 1} голосов для принятия</span></p>
+      ${chamber()}
+    </section>`;
+    const calculator = law ? voteForm(law) : `<section class="panel">${partyCalculator(readingParties)}</section>`;
+    screen.innerHTML = search + (law ? billCard(law) : '') +
+      `<div class="split senate-layout">${chart}${calculator}</div>`;
+    setupCalculator(readingParties);
+    if (state.snapElection) return;
+
+    setupBillSearch(id => {
       if (selectedBill !== id) {
         selectedBill = id;
+        voteDraft = {};
         notice.hidden = true;
-        renderSenate();
+        renderReading();
       } else {
         byId('law-query').blur();
       }
       byId('current-bill').focus();
-    }
-    setupBillSearch(openLaw);
+    });
     if (!law) return;
+
     const form = byId('vote-form');
     const flags = all(form, '.vote-flag');
     const positions = () => Object.fromEntries(flags.map(flag => [flag.dataset.party, flag.dataset.position]));
@@ -320,12 +340,14 @@
         `<span class="${key}">${secondReading && key === 'abstain' ? 'Не определились' : labels[key]} <b>${totals[key]}</b></span>`).join('');
       form.querySelector('button[type="submit"]').disabled = secondReading && totals.abstain > 0;
     }
-    for (const flag of flags) updateFlag(flag, 'abstain');
+    for (const flag of flags) updateFlag(flag, voteDraft[flag.dataset.party] ?? 'abstain');
     updateTally();
-    byId('ballot').addEventListener('click', event => {
+    form.addEventListener('click', event => {
       const flag = event.target.closest('.vote-flag');
       if (!flag) return;
-      updateFlag(flag, flagCycle[flag.dataset.position]);
+      const position = flagCycle[flag.dataset.position];
+      voteDraft[flag.dataset.party] = position;
+      updateFlag(flag, position);
       updateTally();
     });
     form.addEventListener('submit', event => {
@@ -333,6 +355,7 @@
       const result = model.recordVote(state, law, positions());
       if (!result) return;
       selectedBill = null;
+      voteDraft = {};
       save(`«${law.name}» · ${statusText[result]}.`);
     });
   }
@@ -353,14 +376,13 @@
   }
 
   function renderBureaus() {
-    const title = heading('Коалиция и Бюро', 'Отметьте участников коалиции и распределите Бюро. Одна партия даёт два знака на эффект, две партии дают по одному знаку каждая.');
     if (state.snapElection) {
-      screen.innerHTML = title + '<div class="panel empty">Правительство распущено. Назначены досрочные выборы.</div>' + policyCatalog();
+      screen.innerHTML = '<div class="panel empty">Правительство распущено. Назначены досрочные выборы.</div>' + policyCatalog();
       return;
     }
     if (state.government) {
       const { members, policies: enacted, changes } = state.government;
-      screen.innerHTML = title + `<div class="panel government-summary"><h3>Правящая коалиция</h3>
+      screen.innerHTML = `<div class="panel government-summary"><h3>Правящая коалиция</h3>
         <p>${members.map(id => html(parties[id].name)).join(', ')} · ${sum(members.map(id => state.seats[id]))} мандатов</p>
         <div class="chips">${changesReadout(changes)}</div>
         ${partyIds.some(id => !members.includes(id)) ?
@@ -371,7 +393,7 @@
             <strong>${html(policy.name)}</strong><div class="chips">${effectsReadout(policy.effects)}</div></div>`).join('')}</article>`).join('')}</div>` + policyCatalog();
       return;
     }
-    screen.innerHTML = title + `<form id="coalition">
+    screen.innerHTML = `<form id="coalition">
       <section class="panel government-summary"><h3>Участники коалиции</h3>
         <p class="muted">Для формирования правительства нужно больше половины мест.</p>
         ${memberChecks(partyIds, 'member')}<p id="coalition-total" class="coalition-total">0 из ${total()} мандатов</p>
@@ -431,7 +453,6 @@
 
   function renderCrisis() {
     const stage = crises[state.crisisStage];
-    const title = heading('Кризисы', 'Зафиксируйте решения по текущему акту.');
     const resolved = new Map(state.crisisLog.filter(item => item.stage === state.crisisStage).map(item => [item.question, item]));
     const open = !state.snapElection && !resolved.size && stage.questions.some(question => question.options.length);
     const threshold = Math.ceil(total() * 2 / 3);
@@ -439,7 +460,7 @@
     const summary = state.snapElection
       ? '<div class="notice">Правительство распущено. Перейдите к <a href="#campaign">досрочной кампании</a>.</div>'
       : '';
-    screen.innerHTML = title + summary + `<section class="panel crisis-news">
+    screen.innerHTML = summary + `<section class="panel crisis-news">
       <h3>${html(stage.title)}</h3>
       <p class="lead">${html(stage.news ?? 'Для этой ветки в материалах пока есть только название.')}</p>
       ${stage.video ? `<a href="${stage.video}" target="_blank" rel="noopener">Видео новостей</a>` : ''}
@@ -490,9 +511,8 @@
   function renderCampaign() {
     const before = model.electionProjection(state).popularity;
     const groups = socialClasses.map(id => `<option value="${id}">${constituencies[id]}</option>`).join('');
-    screen.innerHTML = heading(state.snapElection ? 'Досрочная кампания' : 'Кампания и выборы',
-      'Внесите три тайных ответа каждой партии. Показанные доли учитывают законы, политику Бюро и кризисы этого созыва.') +
-      `<form id="campaign-form" class="panel">
+    const electionNotice = state.snapElection ? '<div class="notice">Назначены досрочные выборы.</div>' : '';
+    screen.innerHTML = electionNotice + `<form id="campaign-form" class="panel">
         <div class="table-wrap"><table class="campaign-table">
           <thead><tr><th scope="col">Партия</th><th scope="col">Кого винит</th><th scope="col">Основная группа</th>
             <th scope="col">Побочная группа</th><th scope="col">Поддержка</th><th scope="col">Мандаты</th></tr></thead>
@@ -544,6 +564,9 @@
       model.finishElection(state, answers());
       campaignDraft = {};
       selectedBill = null;
+      voteDraft = {};
+      compositionParties.clear();
+      readingParties.clear();
       save(`Созыв № ${state.convocation} сформирован.`, true);
       location.hash = 'statistics';
     });
@@ -564,7 +587,6 @@
     const election = state.lastElection;
     const current = model.electionProjection(state);
     const breakdown = election ?? current;
-    const intro = heading('Статистика', 'Итоги последнего голосования и результаты выборов.');
     const count = last ? sum(Object.values(last.seats)) : 0;
     const vote = last ? `<section class="panel">
       <div class="panel-head"><div><h3>${html(last.name)}</h3>
@@ -588,7 +610,7 @@
         <td>${election.seats[id]}</td><td>${signed(election.seats[id] - election.oldSeats[id])}</td><td>${election.blame[id]}</td></tr>`).join('')}</tbody>
       </table></div></section>` : '';
     const scope = election ? 'последних выборов' : 'до следующих выборов';
-    screen.innerHTML = intro + vote + electionReport +
+    screen.innerHTML = vote + electionReport +
       electionBreakdown('Поддержка по секторам ' + scope, breakdown.bySector, label => html(label)) +
       electionBreakdown('Поддержка по классам ' + scope, breakdown.byClass, key => constituencies[key]);
   }
@@ -597,9 +619,8 @@
     const date = new Intl.DateTimeFormat('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
     const details = entry => `Игра № ${entry.run} · созыв № ${entry.state.convocation} · ${date.format(entry.savedAt)}`;
     const active = archive.active;
-    const intro = heading('Сохранения', `Текущая игра № ${active.run} · созыв № ${active.state.convocation}`);
-    screen.innerHTML = intro + `<section class="panel save-panel">
-      <h3>Текущая игра</h3>
+    screen.innerHTML = `<section class="panel save-panel">
+      <h3>Текущая игра</h3><p class="muted">Игра № ${active.run} · созыв № ${active.state.convocation}</p>
       ${storageAvailable ? '' : '<p class="notice">Хранилище браузера недоступно. Скачайте файл сохранения.</p>'}
       <p class="muted">Скачайте файл, чтобы перенести эту партию в другой браузер или на другой компьютер.</p>
       <div class="save-toolbar">
@@ -654,7 +675,7 @@
     }
   }
 
-  const views = { senate: renderSenate, bureaus: renderBureaus, crisis: renderCrisis, campaign: renderCampaign, board: renderBoard, statistics: renderStatistics, saves: renderSaves };
+  const views = { senate: renderComposition, reading: renderReading, bureaus: renderBureaus, crisis: renderCrisis, campaign: renderCampaign, statistics: renderStatistics, saves: renderSaves };
   function render() {
     const hash = location.hash.slice(1);
     const page = Object.hasOwn(views, hash) ? hash : 'senate';
@@ -662,7 +683,7 @@
       if (link.hash === '#' + page) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     }
-    metrics();
+    byId('session').innerHTML = `<span>СОЗЫВ</span><b>${state.convocation}</b>`;
     views[page]();
   }
 
