@@ -7,7 +7,7 @@
   const storageKey = 'new-republic-senate-v3';
   const previousKey = 'new-republic-senate-v2';
   const fileType = 'new-republic-senate';
-  const fileVersion = 2;
+  const fileVersion = 3;
   const slotCount = 3;
   const axisIds = Object.keys(axisLabels);
   const previousAxes = [...axisIds, ...Object.keys(retiredAxes)];
@@ -63,13 +63,27 @@
       dictionary(election.bySector, systemNames, shares, true) && dictionary(election.byClass, socialClasses, shares, true));
   }
 
+  const knownStage = value => Object.hasOwn(crises, value);
+
+  function crisisValid(entry) {
+    if (!object(entry) || !changes(entry.changes)) return false;
+    if (entry.stage === undefined) {
+      return [0, 1].includes(entry.index) && [0, 1, 2].includes(entry.optionIndex);
+    }
+    if (!knownStage(entry.stage)) return false;
+    const question = crises[entry.stage].questions.find(item => item.id === entry.question);
+    const option = question?.options.find(item => item.id === entry.option);
+    if (!option) return false;
+    return !option.senateVote || (nonnegative(entry.senateVotes) && entry.senateVotes <= seatCount && typeof entry.passed === 'boolean');
+  }
+
   function stateValid(state) {
     return object(state) && roundNumber(state.convocation) && seatMap(state.seats) &&
       dictionary(state.indicators, axisIds, integer, true) && dictionary(state.modifiers, partyIds, scores, true) &&
       dictionary(state.bills, lawIds, allowed(statuses)) && Array.isArray(state.votes) && state.votes.every(voteValid) &&
       governmentValid(state.government) && typeof state.snapElection === 'boolean' && electionValid(state.lastElection) &&
-      Array.isArray(state.crisisLog) && state.crisisLog.every(entry => object(entry) && nonnegative(entry.index) &&
-        nonnegative(entry.optionIndex) && Boolean(crises[entry.index]?.options[entry.optionIndex]) && changes(entry.changes));
+      knownStage(state.crisisStage) && (state.nextCrisisStage === null || knownStage(state.nextCrisisStage)) &&
+      Array.isArray(state.crisisLog) && state.crisisLog.every(crisisValid);
   }
 
   function mergeAxes(value, valid, combine) {
@@ -88,6 +102,7 @@
   }));
 
   function upgradeState(state) {
+    if (object(state) && state.crisisStage === undefined) state = { ...state, crisisStage: 'I', nextCrisisStage: null };
     if (!object(state?.indicators) || !Object.keys(retiredAxes).some(key => Object.hasOwn(state.indicators, key))) return state;
     const { government, votes, crisisLog } = state;
     const upgradeChange = entry => object(entry) ? { ...entry, changes: mergeChanges(entry.changes) } : entry;
@@ -180,7 +195,7 @@
 
   function importState(text) {
     const file = JSON.parse(text);
-    if (!object(file) || file.game !== fileType || ![1, fileVersion].includes(file.version)) {
+    if (!object(file) || file.game !== fileType || ![1, 2, fileVersion].includes(file.version)) {
       throw new Error('Неверный формат сохранения');
     }
     const state = upgradeState(file.state);

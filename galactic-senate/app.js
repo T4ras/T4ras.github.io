@@ -433,23 +433,35 @@
   }
 
   function renderCrisis() {
-    const title = heading('Кризисы', 'Выберите по одному варианту на каждый вопрос и зафиксируйте решения.');
-    const resolved = new Map(state.crisisLog.filter(item => item.unanimous !== false).map(item => [item.index, item]));
-    const open = !state.snapElection && resolved.size < crises.length;
+    const stage = crises[state.crisisStage];
+    const title = heading('Кризисы', 'Зафиксируйте решения по текущему акту.');
+    const resolved = new Map(state.crisisLog.filter(item => item.stage === state.crisisStage).map(item => [item.question, item]));
+    const open = !state.snapElection && !resolved.size && stage.questions.some(question => question.options.length);
+    const threshold = Math.ceil(total() * 2 / 3);
+    const accession = resolved.get('accession');
     const summary = state.snapElection
       ? '<div class="notice">Правительство распущено. Перейдите к <a href="#campaign">досрочной кампании</a>.</div>'
       : '';
-    screen.innerHTML = title + summary + `<form id="crisis-form">
-      <div class="crisis-grid">${crises.map((question, index) => {
-        const decision = resolved.get(index);
+    screen.innerHTML = title + summary + `<section class="panel crisis-news">
+      <h3>${html(stage.title)}</h3>
+      <p class="lead">${html(stage.news ?? 'Для этой ветки в материалах пока есть только название.')}</p>
+      ${stage.video ? `<a href="${stage.video}" target="_blank" rel="noopener">Видео новостей</a>` : ''}
+    </section><form id="crisis-form">
+      <div class="crisis-grid">${stage.questions.map(question => {
+        const decision = resolved.get(question.id);
         return `<section class="panel crisis-question">
-          <h3>${html(question.name)}</h3><p class="lead">${html(question.description)}</p>
-          <fieldset ${decision || state.snapElection ? 'disabled' : ''}><legend>Варианты решения</legend>
-            <div class="choice-grid">${question.options.map((option, optionIndex) => `<label class="choice">
-              <input required type="radio" name="crisis-${index}" value="${optionIndex}" ${decision?.optionIndex === optionIndex ? 'checked' : ''}>
+          <h3>${html(question.name)}</h3>
+          ${question.options.length ? `<fieldset ${open ? '' : 'disabled'}><legend>Варианты решения</legend>
+            <div class="choice-grid">${question.options.map(option => `<label class="choice">
+              <input required type="radio" name="${question.id}" value="${option.id}" ${decision?.option === option.id ? 'checked' : ''}>
               <b>${html(option.name)}</b>
             </label>`).join('')}</div>
-          </fieldset>
+          </fieldset>` : '<p class="lead">В материале пока нет вариантов ответа.</p>'}
+          ${question.id === 'accession' && open ? `<label id="senate-vote-field" hidden>Голосов Сената за переговоры
+            <input id="senate-votes" type="number" min="0" max="${total()}" step="1" aria-describedby="senate-threshold" disabled>
+            <span id="senate-threshold">Для начала переговоров нужно ${threshold} голосов.</span></label>` : ''}
+          ${question.id === 'accession' && accession?.senateVotes !== undefined ? `<p class="lead">За переговоры ${accession.senateVotes} из ${total()}.
+            ${accession.passed ? 'Переговоры одобрены.' : 'Порог голосов не достигнут.'}</p>` : ''}
         </section>`;
       }).join('')}</div>
       <div class="actions crisis-actions">
@@ -458,14 +470,19 @@
       </div>
     </form>`;
     const form = byId('crisis-form');
+    const senateBallot = byId('senate-votes');
+    if (senateBallot) {
+      form.addEventListener('change', () => {
+        const voteRequired = form.querySelector('[name="accession"]:checked')?.value === 'negotiate';
+        byId('senate-vote-field').hidden = !voteRequired;
+        senateBallot.disabled = !voteRequired;
+        senateBallot.required = voteRequired;
+      });
+    }
     form.addEventListener('submit', event => {
       event.preventDefault();
-      const values = new FormData(form);
-      const decisions = Object.fromEntries(crises.flatMap((_, index) => {
-        const value = values.get('crisis-' + index);
-        return value === null ? [] : [[index, Number(value)]];
-      }));
-      if (model.resolveCrises(state, decisions)) save('Решения по кризисам вступили в силу.');
+      const decisions = Object.fromEntries(new FormData(form));
+      if (model.resolveCrises(state, decisions, senateBallot?.valueAsNumber)) save('Решения по кризисам вступили в силу.');
     });
     byId('dissolve')?.addEventListener('click', () => {
       model.dissolveGovernment(state);

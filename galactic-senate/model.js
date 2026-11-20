@@ -13,26 +13,7 @@
     'Бюро Социальных Служб', 'Бюро Внутренних Дел',
     'Бюро Финансов и Экономики', 'Бюро Галактических Отношений'
   ];
-  const crises = [
-    {
-      name: 'Перебои на торговых маршрутах',
-      description: 'На маршрутах между Неймодией и центральными системами срываются поставки. Торговые дома требуют гарантий, а цены в секторах растут.',
-      options: [
-        { name: 'Компенсировать перевозчикам издержки', effects: { budget: -1, trade: 1, Self: 1 } },
-        { name: 'Договориться с торговыми домами о едином графике', effects: { image: 1, trade: 1, Sys_Неймодия: 1 } },
-        { name: 'Передать координацию поставок секторам', effects: { budget: 1, trade: -1, autonomy: 1, Self: 1 } }
-      ]
-    },
-    {
-      name: 'Неурожай на Танаабе',
-      description: 'Гильдии предупреждают о нехватке продовольствия. Делегации спорят, кто оплатит поставки из других секторов.',
-      options: [
-        { name: 'Закупить продовольствие в других секторах', effects: { budget: -1, food: 1, Sys_Танааб: 1 } },
-        { name: 'Дать хозяйствам льготные кредиты', effects: { budget: -1, Farmer: 1, Sys_Танааб: 1 } },
-        { name: 'Открыть резерв по соглашению с секторами', effects: { budget: -1, food: 1, autonomy: 1 } }
-      ]
-    }
-  ];
+  const crises = window.senateCrises;
   const entries = Object.entries;
   const record = pairs => Object.fromEntries(pairs);
   const sum = values => values.reduce((total, value) => total + value, 0);
@@ -44,7 +25,8 @@
     return {
       convocation, seats: { ...seats }, indicators: record(Object.keys(axisLabels).map(key => [key, 0])),
       modifiers: record(partyIds.map(id => [id, {}])), bills: {}, votes: [],
-      government: null, crisisLog: [], snapElection: false, lastElection: null
+      government: null, crisisStage: 'I', nextCrisisStage: null, crisisLog: [],
+      snapElection: false, lastElection: null
     };
   }
 
@@ -138,17 +120,47 @@
     return true;
   }
 
-  function resolveCrises(state, decisions) {
-    if (state.snapElection) return false;
-    const recorded = new Set(state.crisisLog.filter(item => item.unanimous !== false).map(item => item.index));
-    const pending = crises.map((crisis, index) => ({ crisis, index })).filter(item => !recorded.has(item.index));
-    if (!pending.length || pending.some(({ crisis, index }) => !crisis.options[decisions[index]])) return false;
-    for (const { crisis, index } of pending) {
-      const optionIndex = decisions[index];
-      const { effects } = crisis.options[optionIndex];
+  function nextStage(stage, decisions, army) {
+    const fleetReady = army >= 2;
+    switch (stage) {
+      case 'I':
+        return decisions.fleet === 'send' && fleetReady ? 'II-A' : 'II-B';
+      case 'II-A':
+        if (decisions.commonwealth === 'intervene') return fleetReady ? 'III-D' : 'III-C';
+        return decisions.commonwealth === 'embargo' ? 'III-B' : 'III-A';
+      case 'II-B':
+        return decisions.strike === 'send' ? 'III-F' : 'III-E';
+      default:
+        return stage;
+    }
+  }
+
+  function resolveCrises(state, decisions, senateVotes) {
+    const stage = state.crisisStage;
+    const recorded = state.crisisLog.some(item => item.stage === stage);
+    if (state.snapElection || recorded) return false;
+    const questions = crises[stage].questions.filter(question => question.options.length);
+    const selected = questions.map(question => question.options.find(option => option.id === decisions[question.id]));
+    if (!questions.length || selected.some(option => !option)) return false;
+
+    const total = sum(Object.values(state.seats));
+    const requiresVote = selected.some(option => option.senateVote);
+    if (requiresVote && (!Number.isInteger(senateVotes) || senateVotes < 0 || senateVotes > total)) return false;
+    const army = state.indicators.army;
+    state.nextCrisisStage = nextStage(stage, decisions, army);
+
+    for (const [index, question] of questions.entries()) {
+      const option = selected[index];
+      const passed = !option.senateVote || 3 * senateVotes >= 2 * total;
+      const effects = passed ? { ...option.effects } : {};
+      if (stage === 'I' && option.id === 'send') {
+        effects.image = army >= 2 ? 1 : -1;
+        effects.imperial = army >= 2 ? -1 : 1;
+      }
       const changes = applyEffects(state, effects);
       for (const id of state.government?.members ?? []) updateSupport(state.modifiers, id, effects, 1);
-      state.crisisLog.push({ index, optionIndex, changes });
+      const vote = option.senateVote ? { senateVotes, passed } : {};
+      state.crisisLog.push({ stage, question: question.id, option: option.id, changes, ...vote });
     }
     return true;
   }
@@ -246,6 +258,8 @@
     state.seats = result.seats;
     state.government = null;
     state.bills = {};
+    state.crisisStage = state.nextCrisisStage ?? nextStage(state.crisisStage, {}, state.indicators.army);
+    state.nextCrisisStage = null;
     state.crisisLog = [];
     state.snapElection = false;
   }

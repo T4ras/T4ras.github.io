@@ -232,3 +232,6 @@ td select { min-width: 13rem; }
 @media (max-width: 720px) {
   .law-search, .crisis-grid { grid-template-columns: 1fr; }
 }
+
+.crisis-news { margin-bottom: 1rem; }
+.crisis-news a { display: inline-block; margin-top: .55rem; }
