@@ -7,7 +7,7 @@
   const storageKey = 'new-republic-senate-v3';
   const previousKey = 'new-republic-senate-v2';
   const fileType = 'new-republic-senate';
-  const fileVersion = 3;
+  const fileVersion = 4;
   const slotCount = 3;
   const axisIds = Object.keys(axisLabels);
   const previousAxes = [...axisIds, ...Object.keys(retiredAxes)];
@@ -91,6 +91,7 @@
     const merged = new Map();
     for (const [key, entry] of Object.entries(value)) {
       const target = Object.hasOwn(retiredAxes, key) ? retiredAxes[key] : key;
+      if (target === null) continue;
       merged.set(target, merged.has(target) ? combine(merged.get(target), entry) : entry);
     }
     return Object.fromEntries(merged);
@@ -195,7 +196,7 @@
 
   function importState(text) {
     const file = JSON.parse(text);
-    if (!object(file) || file.game !== fileType || ![1, 2, fileVersion].includes(file.version)) {
+    if (!object(file) || file.game !== fileType || ![1, 2, 3, fileVersion].includes(file.version)) {
       throw new Error('Неверный формат сохранения');
     }
     const state = upgradeState(file.state);

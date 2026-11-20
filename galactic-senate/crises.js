@@ -6,16 +6,16 @@ window.senateCrises = {
     video: 'https://drive.google.com/file/d/1E6IP2WLbINXdc5Cm1snPdkf-FyeYGFER/view',
     questions: [
       { id: 'fleet', name: 'Что делать с проимперским режимом на Родии?', options: [
-        { id: 'wait', name: 'Ничего', effects: { imperial: 1, image: -1 } },
+        { id: 'wait', name: 'Ничего', effects: { image: -1 } },
         { id: 'send', name: 'Отправить флот Республики на освобождение Родии', effects: { budget: -1 } }
       ] },
       { id: 'refugees', name: 'Что делать с беженцами-экзотами?', options: [
         { id: 'wait', name: 'Ничего', effects: { welfare: -1 } },
-        { id: 'help', name: 'Помочь социальными выплатами', effects: { budget: -1, welfare: 1, Bonus_Alien: 1, turnoutAlien: 1 } },
-        { id: 'restrict', name: 'Ограничить миграцию', effects: { image: -1, rights: -1, Bonus_Alien: -1 } }
+        { id: 'help', name: 'Помочь социальными выплатами', effects: { budget: -1, welfare: 1, Bonus_Alien: 1 } },
+        { id: 'restrict', name: 'Ограничить миграцию', effects: { image: -1, Bonus_Alien: -1 } }
       ] },
       { id: 'farms', name: 'Что делать с потерями на аграрных рынках?', options: [
-        { id: 'wait', name: 'Ничего', effects: { food: -1, Farmer: -1, Sys_Танааб: -1, Sys_Ондерон: -1 } },
+        { id: 'wait', name: 'Ничего', effects: { Farmer: -1, Sys_Танааб: -1, Sys_Ондерон: -1 } },
         { id: 'compensate', name: 'Финансово компенсировать потери фермеров', effects: { budget: -1, Farmer: 1, Sys_Танааб: 1, Sys_Ондерон: 1 } }
       ] }
     ]
@@ -31,8 +31,8 @@ window.senateCrises = {
         { id: 'decline', name: 'Не начинать переговоры', effects: {} }
       ] },
       { id: 'commonwealth', name: 'Что делать с Содружеством Нейтральных Миров?', options: [
-        { id: 'wait', name: 'Ничего не делать', effects: { industry: -1 } },
-        { id: 'embargo', name: 'Ввести ответное эмбарго', effects: { trade: -1, investment: -1, image: -1, Rich: -1 } },
+        { id: 'wait', name: 'Ничего не делать', effects: {} },
+        { id: 'embargo', name: 'Ввести ответное эмбарго', effects: { image: -1, Rich: -1 } },
         { id: 'intervene', name: 'Вторгнуться', effects: { budget: -1, image: -1 } }
       ] }
     ]
@@ -43,12 +43,12 @@ window.senateCrises = {
     source: 'https://docs.google.com/document/d/11f6PA7t0YYnGoDY8NFSHelTrq-3gc109mQD3Ckh9ywk/edit',
     questions: [
       { id: 'strike', name: 'Отправлять флот освобождать Родию?', options: [
-        { id: 'wait', name: 'Воздержаться от первого удара', effects: { imperial: 1 } },
+        { id: 'wait', name: 'Воздержаться от первого удара', effects: {} },
         { id: 'send', name: 'Отправить флот', effects: { budget: -1 } }
       ] },
       { id: 'banks', name: 'Спасать банковскую систему?', options: [
-        { id: 'bailout', name: 'Спасать банковскую систему', effects: { budget: -1, investment: 1, Rich: 1 } },
-        { id: 'wait', name: 'Не спасать банки', effects: { investment: -1, economy: -1, Rich: -1, Middle: -1 } }
+        { id: 'bailout', name: 'Спасать банковскую систему', effects: { budget: -1, Rich: 1 } },
+        { id: 'wait', name: 'Не спасать банки', effects: { Rich: -1, Middle: -1 } }
       ] },
       { id: 'jobs', name: 'Что делать с ростом безработицы?', options: [] }
     ]

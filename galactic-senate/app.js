@@ -117,7 +117,7 @@
 
   function metrics() {
     byId('session').innerHTML = `<span>СОЗЫВ</span><b>${state.convocation}</b>`;
-    const metrics = ['budget', 'army', 'rights', 'welfare', 'autonomy'];
+    const metrics = ['budget', 'army', 'authority', 'welfare', 'autonomy'];
     byId('indicators').innerHTML = metrics.map(id => {
       const value = state.indicators[id];
       return `<article class="metric"><span>${axisLabels[id]}</span>

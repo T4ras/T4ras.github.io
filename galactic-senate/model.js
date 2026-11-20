@@ -155,7 +155,6 @@
       const effects = passed ? { ...option.effects } : {};
       if (stage === 'I' && option.id === 'send') {
         effects.image = army >= 2 ? 1 : -1;
-        effects.imperial = army >= 2 ? -1 : 1;
       }
       const changes = applyEffects(state, effects);
       for (const id of state.government?.members ?? []) updateSupport(state.modifiers, id, effects, 1);
@@ -184,7 +183,7 @@
     return { modifiers, blame };
   }
 
-  function voteShares(modifiers, indicators) {
+  function voteShares(modifiers) {
     const bySector = {};
     const classTotals = record(socialClasses.map(key => [key, record(partyIds.map(id => [id, 0]))]));
     const totals = record(partyIds.map(id => [id, 0]));
@@ -192,12 +191,8 @@
       const total = sum(Object.values(votes));
       return record(entries(votes).map(([id, score]) => [id, total ? score / total * 100 : 0]));
     };
-    const turnout = key => Math.max(.2, 1 + .05 * indicators[key]);
     for (const system of systems) {
-      const humans = system.human;
-      const exotics = (1 - humans) * turnout('turnoutAlien');
-      const humanShare = humans / (humans + exotics);
-      const weight = system.weight * (humans + exotics);
+      const humanShare = system.human;
       const sector = 'Sys_' + system.name.replace('-', '');
       const sectorVotes = {};
       for (const id of partyIds) {
@@ -207,8 +202,7 @@
           bonus('Bonus_Alien') * (1 - humanShare) + (modifiers[id].general ?? 0);
         sectorVotes[id] = 0;
         for (const key of socialClasses) {
-          const classShare = system.classes[key] * (key === 'Rich' ? turnout('turnoutRich') : 1);
-          const votes = Math.max(0, general + bonus(key)) * classShare * weight;
+          const votes = Math.max(0, general + bonus(key)) * system.classes[key] * system.weight;
           sectorVotes[id] += votes;
           classTotals[key][id] += votes;
         }
@@ -221,7 +215,7 @@
 
   function electionProjection(state, answers = {}) {
     const { modifiers, blame } = campaignModifiers(state, answers);
-    const support = voteShares(modifiers, state.indicators);
+    const support = voteShares(modifiers);
     const ranking = [...partyIds].sort((a, b) => support.popularity[b] - support.popularity[a]);
     const weights = record(ranking.map((id, rank) =>
       [id, support.popularity[id] * bandwagon ** (1 - Math.max(0, rank - 2) / (partyIds.length - 3))]));
