@@ -146,10 +146,15 @@
     }
   }
 
-  function chamber() {
+  function chamber(reorder = false) {
+    const number = format(total());
+    const counter = reorder
+      ? `<button id="chamber-order-toggle" class="chamber-total-toggle" type="button"
+          aria-label="Изменить порядок партий" aria-pressed="${compositionUnlocked}">${number}</button>`
+      : `<strong>${number}</strong>`;
     return `<div class="chamber">
       <canvas id="chamber" width="1200" height="580" aria-label="Распределение мандатов полукругом"></canvas>
-      <div class="chamber-total"><strong>${format(total())}</strong><span>МАНДАТОВ</span></div>
+      <div class="chamber-total">${counter}<span>МАНДАТОВ</span></div>
     </div>`;
   }
 
@@ -261,20 +266,15 @@
   function renderComposition() {
     screen.innerHTML = `<section class="panel chamber-panel composition ${compositionUnlocked ? 'is-unlocked' : ''}"
       aria-label="Композиция Сената">
-      <div class="composition-toolbar">
-        <button id="seat-lock" class="quiet seat-lock" type="button" aria-pressed="${compositionUnlocked}">
-          <span aria-hidden="true">${compositionUnlocked ? '🔓' : '🔒'}</span> Перестановка партий
-        </button>
-      </div>
-      ${chamber()}
+      ${chamber(true)}
       ${compositionUnlocked ? '<p class="muted drag-help">Перетащите плашку на новое место или переместите её стрелками на клавиатуре.</p>' : ''}
       ${partyCalculator(compositionParties)}
       <span class="screen-reader-text" id="party-order-status" role="status"></span>
     </section>`;
-    byId('seat-lock').addEventListener('click', () => {
+    byId('chamber-order-toggle').addEventListener('click', () => {
       compositionUnlocked = !compositionUnlocked;
       renderComposition();
-      byId('seat-lock').focus({ preventScroll: true });
+      byId('chamber-order-toggle').focus({ preventScroll: true });
     });
     setupCalculator(compositionParties, !compositionUnlocked);
     if (compositionUnlocked) setupPartyDrag();

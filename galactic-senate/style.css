@@ -111,7 +111,7 @@ main.frame { padding-block: 1.35rem 2rem; }
 }
 .chamber canvas { display: block; width: 100%; height: auto; }
 .chamber-total { position: absolute; bottom: 4%; left: 0; right: 0; text-align: center; pointer-events: none; }
-.chamber-total strong { display: block; color: #d3eaff; font-variant-numeric: tabular-nums; font-size: clamp(1.15rem, 2.9vw, 2.7rem); line-height: 1.04; }
+.chamber-total strong, .chamber-total-toggle { display: block; color: #d3eaff; font-variant-numeric: tabular-nums; font-size: clamp(1.15rem, 2.9vw, 2.7rem); line-height: 1.04; }
 .chamber-total span { color: var(--muted); font-size: clamp(.6rem, 1.2vw, .84rem); letter-spacing: .08em; }
 .party-dot { display: inline-block; width: .62rem; height: .62rem; margin-right: .45rem; border-radius: 50%; background: var(--party); }
 .stack { display: grid; gap: .8rem; }
@@ -238,7 +238,11 @@ td select { min-width: 13rem; }
 
 .composition { max-width: 1080px; margin-inline: auto; }
 .composition .chamber { max-width: 920px; }
-.composition .chamber-total strong { font-size: clamp(1.35rem, 5vw, 4rem); }
+.chamber-total-toggle {
+  margin-inline: auto; padding: 0; border: 0; background: transparent; font-weight: 700; pointer-events: auto;
+}
+.chamber-total-toggle[aria-pressed="true"] { color: var(--accent); }
+.composition .chamber-total-toggle { font-size: clamp(1.35rem, 5vw, 4rem); }
 .composition .seat-list { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: .8rem; }
 .composition .party-calculator { margin-top: .85rem; }
 .seat-list { display: grid; gap: .3rem; margin: 0; padding: 0; list-style: none; }
@@ -273,9 +277,6 @@ td select { min-width: 13rem; }
   .seat-list .vote-flag { flex-basis: 7.9rem; grid-template-columns: 1.6rem minmax(0, 1fr); }
 }
 
-.composition-toolbar { display: flex; justify-content: flex-end; margin-bottom: .7rem; }
-.seat-lock { display: inline-flex; gap: .45rem; align-items: center; margin: 0; }
-.seat-lock[aria-pressed="true"] { border-color: var(--accent); background: #30281c; }
 .drag-help { margin: .75rem 0 0; }
 .composition.is-unlocked .seat-choice { cursor: grab; touch-action: none; user-select: none; }
 .composition.is-unlocked .seat-choice.drag-source { opacity: .45; cursor: grabbing; }
