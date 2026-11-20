@@ -18,7 +18,6 @@
   const statusText = { passed: 'Принят', rejected: 'Отклонён', second: 'Направлен на второе чтение' };
   const screen = byId('screen');
   const notice = byId('notice');
-  const defaultSaveStatus = byId('save-status').textContent;
   let archive;
   let storageReadable = true;
   let selectedBill = null;
@@ -31,19 +30,17 @@
     archive = saves.create();
   }
   let state = archive.active.state;
-  persist();
+  let storageAvailable = persist();
 
   function persist() {
     try {
       if (storageReadable) {
         saves.write(localStorage, archive);
-        byId('save-status').textContent = defaultSaveStatus;
         return true;
       }
     } catch {
       // The in-memory session and file export are still available.
     }
-    byId('save-status').textContent = 'Хранилище браузера недоступно. Скачайте файл сохранения.';
     return false;
   }
 
@@ -53,8 +50,8 @@
   }
 
   function announceSave(message) {
-    const written = persist();
-    showNotice(written ? message : message + ' Изменения доступны до закрытия страницы. Скачайте файл для копии.');
+    storageAvailable = persist();
+    showNotice(storageAvailable ? message : message + ' Изменения доступны до закрытия страницы. Скачайте файл для копии.');
     render();
   }
 
@@ -603,6 +600,7 @@
     const intro = heading('Сохранения', `Текущая игра № ${active.run} · созыв № ${active.state.convocation}`);
     screen.innerHTML = intro + `<section class="panel save-panel">
       <h3>Текущая игра</h3>
+      ${storageAvailable ? '' : '<p class="notice">Хранилище браузера недоступно. Скачайте файл сохранения.</p>'}
       <p class="muted">Скачайте файл, чтобы перенести эту партию в другой браузер или на другой компьютер.</p>
       <div class="save-toolbar">
         <button class="danger" type="button" id="new-game">Новая игра</button>

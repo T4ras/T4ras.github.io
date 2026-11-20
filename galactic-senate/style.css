@@ -151,7 +151,6 @@ td select { min-width: 13rem; }
 .confirm { margin-top: 1rem; color: var(--text); }
 .results-bar { display: flex; height: .64rem; border-radius: 10px; overflow: hidden; margin: 0 0 .7rem; background: var(--field); }
 .results-bar i { background: currentColor; }
-.footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .6rem 1rem; border-top: 1px solid var(--stroke); margin-top: 1.5rem; padding: .85rem 0 1.25rem; color: var(--muted); font-size: .83rem; }
 
 @media (max-width: 860px) {
   .frame { width: min(100% - 2rem, 1300px); }
