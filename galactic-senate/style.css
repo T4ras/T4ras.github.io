@@ -272,3 +272,12 @@ td select { min-width: 13rem; }
   .seat-choice { font-size: .9rem; }
   .seat-list .vote-flag { flex-basis: 7.9rem; grid-template-columns: 1.6rem minmax(0, 1fr); }
 }
+
+.composition-toolbar { display: flex; justify-content: flex-end; margin-bottom: .7rem; }
+.seat-lock { display: inline-flex; gap: .45rem; align-items: center; margin: 0; }
+.seat-lock[aria-pressed="true"] { border-color: var(--accent); background: #30281c; }
+.drag-help { margin: .75rem 0 0; }
+.composition.is-unlocked .seat-choice { cursor: grab; touch-action: none; user-select: none; }
+.composition.is-unlocked .seat-choice.drag-source { opacity: .45; cursor: grabbing; }
+.composition.is-unlocked .seat-choice.drag-target { border-color: var(--accent); background: #30281c; }
+.screen-reader-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

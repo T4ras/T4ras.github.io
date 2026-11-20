@@ -23,6 +23,7 @@
   let selectedBill = null;
   let voteDraft = {};
   const compositionParties = new Set();
+  let compositionUnlocked = false;
   const readingParties = new Set();
   let partyFilter = '';
   let campaignDraft = {};
@@ -68,6 +69,7 @@
     selectedBill = null;
     voteDraft = {};
     compositionParties.clear();
+    compositionUnlocked = false;
     readingParties.clear();
     partyFilter = '';
     campaignDraft = {};
@@ -117,6 +119,8 @@
     ? '<span class="chip">Бюджет к нулю и благосостояние: по текущему балансу</span>'
     : effectsReadout(Object.fromEntries(entries(policy.effects).map(([key, value]) => [key, value * 2])));
 
+  const orderedParties = () => state.partyOrder ?? partyIds;
+
   function drawChamber(selected) {
     const canvas = byId('chamber');
     const ctx = canvas.getContext('2d');
@@ -130,7 +134,7 @@
       return Array.from({ length: count }, (_, j) => ({ radius, angle: Math.PI - Math.PI * (j + .5) / count }));
     }).sort((a, b) => b.angle - a.angle);
     let position = 0;
-    for (const id of partyIds) {
+    for (const id of orderedParties()) {
       ctx.globalAlpha = !selected.size || selected.has(id) ? 1 : .16;
       ctx.fillStyle = parties[id].color;
       for (let i = 0; i < state.seats[id]; i++) {
@@ -151,7 +155,7 @@
 
   function partyCalculator(selected, voting = false) {
     return `<div id="party-calculator" class="party-calculator">
-      <ul class="seat-list" aria-label="Партии и мандаты">${partyIds.map(id => `<li>
+      <ul class="seat-list" aria-label="Партии и мандаты">${orderedParties().map(id => `<li>
         <button class="seat-choice" type="button" data-seat-party="${id}" aria-pressed="${selected.has(id)}">
           <span>${party(id)}</span><b>${state.seats[id]}</b>
         </button>
@@ -166,7 +170,9 @@
     </div>`;
   }
 
-  function setupCalculator(selected) {
+  function setupCalculator(selected, selectParties = true) {
+    drawChamber(selected);
+    if (!selectParties) return;
     byId('party-calculator').addEventListener('click', event => {
       const button = event.target.closest('[data-seat-party]');
       if (!button) return;
@@ -177,13 +183,101 @@
       byId('seat-total').value = format(sum([...selected].map(id => state.seats[id])));
       drawChamber(selected);
     });
-    drawChamber(selected);
+  }
+
+  function moveParty(from, to) {
+    if (from === to) return;
+    const order = [...orderedParties()];
+    const destination = order.indexOf(to);
+    order.splice(order.indexOf(from), 1);
+    order.splice(destination, 0, from);
+    state.partyOrder = order;
+    saves.commit(archive, state, false);
+    storageAvailable = persist();
+    renderComposition();
+    screen.querySelector(`[data-seat-party="${from}"]`).focus({ preventScroll: true });
+    byId('party-order-status').textContent = `${parties[from].name} · позиция ${destination + 1} из ${order.length}.`;
+    if (!storageAvailable) showNotice('Порядок мест изменён. Скачайте сохранение, чтобы сохранить его после закрытия страницы.');
+  }
+
+  function setupPartyDrag() {
+    const list = screen.querySelector('.seat-list');
+    let drag = null;
+
+    const partyButton = target => {
+      const button = target?.closest('[data-seat-party]');
+      return list.contains(button) ? button : null;
+    };
+
+    function updateTarget(event) {
+      const distance = Math.hypot(event.clientX - drag.x, event.clientY - drag.y);
+      if (!drag.moved && distance < 5) return;
+      drag.moved = true;
+      drag.source.classList.add('drag-source');
+      const candidate = partyButton(document.elementFromPoint(event.clientX, event.clientY));
+      const target = candidate === drag.source ? null : candidate;
+      if (target === drag.target) return;
+      drag.target?.classList.remove('drag-target');
+      drag.target = target;
+      target?.classList.add('drag-target');
+    }
+
+    function finishDrag(event, drop = false) {
+      if (drag?.pointerId !== event.pointerId) return;
+      if (drop) updateTarget(event);
+      const { source, target } = drag;
+      drag = null;
+      source.classList.remove('drag-source');
+      target?.classList.remove('drag-target');
+      if (drop && target) moveParty(source.dataset.seatParty, target.dataset.seatParty);
+    }
+
+    list.addEventListener('pointerdown', event => {
+      const source = partyButton(event.target);
+      if (!source || drag || event.button !== 0) return;
+      event.preventDefault();
+      source.focus({ preventScroll: true });
+      drag = { source, pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+      list.setPointerCapture(event.pointerId);
+    });
+    list.addEventListener('pointermove', event => {
+      if (drag?.pointerId === event.pointerId) updateTarget(event);
+    });
+    list.addEventListener('pointerup', event => finishDrag(event, true));
+    list.addEventListener('pointercancel', finishDrag);
+    list.addEventListener('lostpointercapture', finishDrag);
+    list.addEventListener('keydown', event => {
+      const source = partyButton(event.target);
+      const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[event.key];
+      if (!source || !step) return;
+      event.preventDefault();
+      const id = source.dataset.seatParty;
+      const order = orderedParties();
+      const target = order[order.indexOf(id) + step];
+      if (target) moveParty(id, target);
+    });
   }
 
   function renderComposition() {
-    screen.innerHTML = `<section class="panel chamber-panel composition"
-      aria-label="Композиция Сената">${chamber()}${partyCalculator(compositionParties)}</section>`;
-    setupCalculator(compositionParties);
+    screen.innerHTML = `<section class="panel chamber-panel composition ${compositionUnlocked ? 'is-unlocked' : ''}"
+      aria-label="Композиция Сената">
+      <div class="composition-toolbar">
+        <button id="seat-lock" class="quiet seat-lock" type="button" aria-pressed="${compositionUnlocked}">
+          <span aria-hidden="true">${compositionUnlocked ? '🔓' : '🔒'}</span> Перестановка партий
+        </button>
+      </div>
+      ${chamber()}
+      ${compositionUnlocked ? '<p class="muted drag-help">Перетащите плашку на новое место или переместите её стрелками на клавиатуре.</p>' : ''}
+      ${partyCalculator(compositionParties)}
+      <span class="screen-reader-text" id="party-order-status" role="status"></span>
+    </section>`;
+    byId('seat-lock').addEventListener('click', () => {
+      compositionUnlocked = !compositionUnlocked;
+      renderComposition();
+      byId('seat-lock').focus({ preventScroll: true });
+    });
+    setupCalculator(compositionParties, !compositionUnlocked);
+    if (compositionUnlocked) setupPartyDrag();
   }
 
   function billSearch(law) {

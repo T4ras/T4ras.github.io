@@ -77,8 +77,13 @@
     return !option.senateVote || (nonnegative(entry.senateVotes) && entry.senateVotes <= seatCount && typeof entry.passed === 'boolean');
   }
 
+  function partyOrderValid(order) {
+    return order === undefined || (Array.isArray(order) && order.length === partyIds.length &&
+      new Set(order).size === partyIds.length && order.every(allowed(partyIds)));
+  }
+
   function stateValid(state) {
-    return object(state) && roundNumber(state.convocation) && seatMap(state.seats) &&
+    return object(state) && roundNumber(state.convocation) && seatMap(state.seats) && partyOrderValid(state.partyOrder) &&
       dictionary(state.indicators, axisIds, integer, true) && dictionary(state.modifiers, partyIds, scores, true) &&
       dictionary(state.bills, lawIds, allowed(statuses)) && Array.isArray(state.votes) && state.votes.every(voteValid) &&
       governmentValid(state.government) && typeof state.snapElection === 'boolean' && electionValid(state.lastElection) &&
