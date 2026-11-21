@@ -1036,6 +1036,9 @@
   function renderIndicators(root = screen, readOnly = false) {
     const editing = !readOnly && indicatorsUnlocked;
     const historyVisible = !readOnly && showIndicatorHistory;
+    const startingIndicators = readOnly ? null : model.initialState().indicators;
+    const display = (id, value) => editing || historyVisible
+      ? [signed(value), signClass(value)] : indicatorRating(id, value);
     const groups = Object.hasOwn(state.indicators, model.rodiaAxis)
       ? { ...axes, sector: { ...axes.sector, [model.rodiaAxis]: model.rodia.name } } : axes;
     const titles = { republic: 'Республика', sector: 'Секторы', audience: 'Группы населения' };
@@ -1061,11 +1064,17 @@
       `<section class="panel"><h3>${titles[group]}</h3>
         <dl class="axis-list">${entries(indicators).map(([id, label]) => {
           const value = state.indicators[id];
-          const [labelText, color] = editing || historyVisible
-            ? [signed(value), signClass(value)] : indicatorRating(id, value);
+          const [labelText, color] = display(id, value);
+          const [startText, startColor] = startingIndicators && Object.hasOwn(startingIndicators, id)
+            ? display(id, startingIndicators[id]) : ['Вне Республики', 'muted'];
+          const comparison = startingIndicators ? `<span class="axis-comparison">
+            <span class="${startColor}" title="Состояние на начало игры">${startText}</span>
+            <span class="muted" aria-hidden="true">→</span>
+          </span>` : '';
           const controls = (step, text, name) => editing ? `<button type="button" class="axis-step"
             data-indicator-step="${step}" aria-label="${name} «${html(label)}»">${text}</button>` : '';
-          return `<div data-axis="${id}"><dt>${html(label)}</dt><dd>
+          return `<div data-axis="${id}"><dt>${html(label)}</dt><dd class="${startingIndicators ? 'axis-values' : ''}">
+            ${comparison}
             ${controls(-1, '−', 'Уменьшить')}
             <output class="${color}" aria-live="polite">${labelText}</output>
             ${controls(1, '+', 'Увеличить')}

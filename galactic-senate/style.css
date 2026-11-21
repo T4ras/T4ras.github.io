@@ -403,3 +403,7 @@ td select { min-width: 13rem; }
   .crisis-body .panel { padding: .8rem 1rem; }
   .crisis-body .axis-list > div { padding-block: .24rem; }
 }
+
+.axis-list dd.axis-values, .axis-comparison { flex-wrap: wrap; white-space: normal; }
+.axis-comparison { display: inline-flex; align-items: baseline; gap: .35rem; }
+.axis-values output { text-align: left; }
