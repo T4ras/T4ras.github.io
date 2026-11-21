@@ -64,6 +64,28 @@
     return totals;
   }
 
+  function voteOutcome(totals, total, reading) {
+    if (3 * totals.yes > 2 * total) return 'passed';
+    if (reading === 1 && 3 * totals.no < total) return 'second';
+    return 'rejected';
+  }
+
+  function replayVotes(state, seats) {
+    const total = sum(Object.values(seats));
+    const bills = new Map();
+    for (const vote of state.votes) {
+      if (vote.convocation !== state.convocation) continue;
+      const id = vote.billId ?? vote.author + ':' + vote.name;
+      const bill = bills.get(id) ?? {};
+      bill.actual = { reading: vote.reading, status: vote.status };
+      if (vote.reading === 1 || !bill.projected || bill.projected.status === 'second') {
+        bill.projected = { reading: vote.reading, status: voteOutcome(tally(seats, vote.positions), total, vote.reading) };
+      }
+      bills.set(id, bill);
+    }
+    return [...bills.values()];
+  }
+
   function recordVote(state, law, positions) {
     const existing = state.bills[law.id];
     if (existing && existing !== 'second') return null;
@@ -72,9 +94,7 @@
     if (!partyIds.every(id => allowed.includes(positions[id]))) return null;
     const total = sum(Object.values(state.seats));
     const totals = tally(state.seats, positions);
-    let status = 'rejected';
-    if (3 * totals.yes > 2 * total) status = 'passed';
-    else if (reading === 1 && 3 * totals.no < total) status = 'second';
+    const status = voteOutcome(totals, total, reading);
     state.bills[law.id] = status;
     const changes = status === 'passed' ? applyEffects(state, law.effects) : {};
     const popularity = {};
@@ -259,10 +279,22 @@
   function electionProjection(state, answers = {}) {
     const { modifiers, blame } = campaignModifiers(state, answers);
     const support = voteShares(modifiers);
-    const ranking = [...partyIds].sort((a, b) => support.popularity[b] - support.popularity[a]);
+    return { ...support, blame, modifiers, seats: allocateSeats(state.seats, support.popularity) };
+  }
+
+  function adjustPopularity(popularity, id, delta) {
+    const others = partyIds.filter(other => other !== id);
+    const otherTotal = sum(others.map(other => popularity[other]));
+    const share = Math.max(0, Math.min(100, popularity[id] + delta));
+    return record(partyIds.map(other => [other, other === id ? share : (100 - share) *
+      (otherTotal > 0 ? popularity[other] / otherTotal : 1 / others.length)]));
+  }
+
+  function allocateSeats(currentSeats, popularity) {
+    const ranking = [...partyIds].sort((a, b) => popularity[b] - popularity[a]);
     const weights = record(ranking.map((id, rank) =>
-      [id, support.popularity[id] * bandwagon ** (1 - Math.max(0, rank - 2) / (partyIds.length - 3))]));
-    const totalSeats = sum(Object.values(state.seats));
+      [id, popularity[id] * bandwagon ** (1 - Math.max(0, rank - 2) / (partyIds.length - 3))]));
+    const totalSeats = sum(Object.values(currentSeats));
     const minimum = Math.ceil(totalSeats * .05);
     const maximum = Math.floor(totalSeats * .333);
 
@@ -284,11 +316,15 @@
     const leftover = totalSeats - sum(allocation.map(row => row.seats));
     const priority = allocation.filter(row => row.seats < maximum).sort((a, b) => b.remainder - a.remainder);
     for (const row of priority.slice(0, leftover)) row.seats++;
-    return { ...support, blame, modifiers, seats: record(allocation.map(row => [row.id, row.seats])) };
+    return record(allocation.map(row => [row.id, row.seats]));
   }
 
-  function finishElection(state, answers) {
+  function finishElection(state, answers, popularity) {
     const { modifiers, ...result } = electionProjection(state, answers);
+    if (popularity) {
+      result.popularity = popularity;
+      result.seats = allocateSeats(state.seats, popularity);
+    }
     archiveImpacts(state, [...governmentImpacts(state), ...crisisImpacts(state)]);
     state.convocation++;
     state.lastElection = { oldSeats: state.seats, ...result, convocation: state.convocation };
@@ -304,6 +340,6 @@
 
   window.senateModel = {
     partyIds, axes, axisLabels, constituencies, socialClasses, laws, policies, bureaus, crises, supportScale,
-    initialState, tally, recordVote, governmentMembers, acceptGovernment, resolveCrises, dissolveGovernment, indicatorHistory, electionProjection, finishElection, sum
+    initialState, tally, recordVote, governmentMembers, acceptGovernment, resolveCrises, dissolveGovernment, indicatorHistory, electionProjection, allocateSeats, adjustPopularity, replayVotes, finishElection, sum
   };
 })();

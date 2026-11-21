@@ -747,6 +747,53 @@
     }).join('');
   }
 
+  function electionPreview(popularity, baseline, preliminary) {
+    const seats = model.allocateSeats(state.seats, popularity);
+    const ranking = [...partyIds].sort((a, b) => popularity[b] - popularity[a]);
+    const peak = Math.max(1, ...Object.values(popularity));
+    const coalition = state.government?.members ?? [];
+    const replay = model.replayVotes(state, seats);
+    const outcomes = [
+      [1, 'passed', 'Принято в первом чтении'], [1, 'rejected', 'Отклонено в первом чтении'],
+      [2, 'passed', 'Принято во втором чтении'], [2, 'rejected', 'Отклонено во втором чтении'],
+      [1, 'second', 'Ожидает второго чтения']
+    ];
+    const count = (key, reading, status) => replay.filter(bill => bill[key].reading === reading && bill[key].status === status).length;
+    const reversed = (from, to) => replay.filter(bill => bill.actual.status === from && bill.projected.status === to).length;
+    return `<h2 tabindex="-1" id="preliminary-title">Предварительные итоги выборов</h2>
+      <div class="table-wrap"><div class="election-results-chart">
+        ${ranking.map(id => {
+          const value = popularity[id];
+          const delta = Math.round((value - baseline[id]) * 10) / 10;
+          const step = preliminary[id] * .1;
+          return `<div class="election-result" title="${html(parties[id].name)}">
+            <strong>${formatPercent(value)}</strong>
+            <small class="${signClass(delta)}">${signed(delta)} п. п.</small>
+            <div class="election-result-track"><span style="height:${value / peak * 100}%;background:${parties[id].color}"></span></div>
+            <abbr title="${html(parties[id].name)}">${html(id)}</abbr>
+            <div class="election-adjust">
+              ${[-1, 1].map(direction => {
+                const symbol = direction < 0 ? '−' : '+';
+                const limit = direction < 0 ? value <= 0 : value >= 100;
+                return `<button type="button" data-adjust="${id}" data-direction="${direction}"
+                  aria-label="${html(parties[id].name)} ${symbol}${format(step)} п. п." ${limit || !step ? 'disabled' : ''}>${symbol}</button>`;
+              }).join('')}
+            </div>
+          </div>`;
+        }).join('')}
+      </div></div>
+      <p><strong>Правящая коалиция</strong> ${coalition.length
+        ? formatPercent(sum(coalition.map(id => popularity[id]))) : '— правительство не сформировано'}</p>
+      <h3>Судьба законопроектов при новом составе</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th scope="col">Статус</th><th scope="col">Было</th><th scope="col">Было бы</th></tr></thead>
+        <tbody>${outcomes.map(([reading, status, label]) => `<tr><th scope="row">${label}</th>
+          <td>${count('actual', reading, status)}</td><td>${count('projected', reading, status)}</td></tr>`).join('')}</tbody>
+      </table></div>
+      <p><strong>Итого</strong> ${reversed('passed', 'rejected')} принятых были бы отклонены,
+        ${reversed('rejected', 'passed')} отклонённых были бы приняты.</p>`;
+  }
+
   function renderCampaign() {
     const groups = socialClasses.map(id => `<option value="${id}">${constituencies[id]}</option>`).join('');
     const electionNotice = state.snapElection ? '<div class="notice">Назначены досрочные выборы.</div>' : '';
@@ -768,11 +815,23 @@
             <td><select required aria-label="Основная группа партии ${html(parties[id].name)}" data-answer="main"><option value="">Выбрать</option>${groups}</select></td>
             <td><select required aria-label="Побочная группа партии ${html(parties[id].name)}" data-answer="secondary"><option value="">Выбрать</option>${groups}</select></td></tr>`).join('')}</tbody>
         </table></div>
-        <p class="muted">Основная группа даёт +2 к рейтингу в группе, побочная +1. Каждое обвинение даёт цели −0,5 к рейтингу по всем группам. Популярность в секторах пересчитывается по мере ввода.</p>
-        <label class="confirm"><input type="checkbox" required> Завершить текущий созыв и сформировать новый по итогам выборов</label>
-        <div class="actions"><button class="primary">Зафиксировать итоги выборов</button></div>
-      </form>`;
+        <div class="actions"><button class="primary">Зафиксировать предварительные итоги выборов</button></div>
+      </form>
+      <section class="panel election-preview" id="election-preview" aria-labelledby="preliminary-title" hidden>
+        <div id="election-preview-results"></div>
+        <form id="finish-election-form">
+          <label class="confirm"><input type="checkbox" required> Завершить текущий созыв и сформировать новый по итогам выборов</label>
+          <div class="actions"><button class="primary">Зафиксировать итоги выборов</button></div>
+        </form>
+      </section>`;
     const form = byId('campaign-form');
+    const preview = byId('election-preview');
+    const results = byId('election-preview-results');
+    const finish = byId('finish-election-form');
+    const baseline = state.lastElection?.convocation === state.convocation ? state.lastElection.popularity :
+      Object.fromEntries(partyIds.map(id => [id, state.seats[id] / total() * 100]));
+    let preliminary;
+    let adjusted;
     for (const row of all(form, '[data-campaign]')) {
       for (const select of all(row, 'select')) {
         select.value = campaignDraft[row.dataset.campaign]?.[select.dataset.answer] ?? '';
@@ -803,6 +862,8 @@
       byId('class-charts').innerHTML = popularityCharts(classGroups, ceiling);
     }
     form.addEventListener('change', () => {
+      preview.hidden = true;
+      adjusted = null;
       updateProjection();
       campaignDraft = Object.fromEntries(all(form, '[data-campaign]').map(row => [
         row.dataset.campaign, Object.fromEntries(all(row, 'select').map(select => [select.dataset.answer, select.value]))
@@ -810,7 +871,25 @@
     });
     form.addEventListener('submit', event => {
       event.preventDefault();
-      model.finishElection(state, answers());
+      preliminary = model.electionProjection(state, answers()).popularity;
+      adjusted = preliminary;
+      results.innerHTML = electionPreview(adjusted, baseline, preliminary);
+      finish.reset();
+      preview.hidden = false;
+      byId('preliminary-title').focus();
+    });
+    results.addEventListener('click', event => {
+      const button = event.target.closest('[data-adjust]');
+      if (!button || !adjusted) return;
+      const { adjust: id, direction } = button.dataset;
+      adjusted = model.adjustPopularity(adjusted, id, preliminary[id] * .1 * Number(direction));
+      results.innerHTML = electionPreview(adjusted, baseline, preliminary);
+      all(results, 'button:enabled').find(next => next.dataset.adjust === id && next.dataset.direction === direction)?.focus();
+    });
+    finish.addEventListener('submit', event => {
+      event.preventDefault();
+      if (!adjusted || preview.hidden) return;
+      model.finishElection(state, answers(), adjusted);
       campaignDraft = {};
       crisisExpanded = false;
       indicatorsUnlocked = false;
