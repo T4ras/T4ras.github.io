@@ -751,6 +751,8 @@
     const ranking = [...partyIds].sort((a, b) => popularity[b] - popularity[a]);
     const peak = Math.max(1, ...Object.values(popularity));
     const coalition = state.government?.members ?? [];
+    const coalitionShare = sum(coalition.map(id => popularity[id]));
+    const coalitionDelta = Math.round((coalitionShare - sum(coalition.map(id => baseline[id]))) * 10) / 10;
     const replay = model.replayVotes(state, seats);
     const outcomes = [
       [1, 'passed', 'Принято в первом чтении'], [1, 'rejected', 'Отклонено в первом чтении'],
@@ -759,8 +761,7 @@
     ];
     const count = (key, reading, status) => replay.filter(bill => bill[key].reading === reading && bill[key].status === status).length;
     const reversed = (from, to) => replay.filter(bill => bill.actual.status === from && bill.projected.status === to).length;
-    return `<h2 tabindex="-1" id="preliminary-title">Предварительные итоги выборов</h2>
-      <div class="table-wrap"><div class="election-results-chart">
+    return `<div class="table-wrap"><div class="election-results-chart">
         ${ranking.map(id => {
           const value = popularity[id];
           const delta = Math.round((value - baseline[id]) * 10) / 10;
@@ -782,7 +783,7 @@
         }).join('')}
       </div></div>
       <p><strong>Правящая коалиция</strong> ${coalition.length
-        ? formatPercent(sum(coalition.map(id => popularity[id]))) : '— правительство не сформировано'}</p>
+        ? `${formatPercent(coalitionShare)} <span class="${signClass(coalitionDelta)}">(${signed(coalitionDelta)} п. п.)</span>` : '— правительство не сформировано'}</p>
       <h3>Судьба законопроектов при новом составе</h3>
       <div class="table-wrap"><table>
         <thead><tr><th scope="col">Статус</th><th scope="col">Было</th><th scope="col">Было бы</th></tr></thead>
@@ -817,6 +818,10 @@
         <div class="actions"><button class="primary">Зафиксировать предварительные итоги выборов</button></div>
       </form>
       <section class="panel election-preview" id="election-preview" aria-labelledby="preliminary-title" hidden>
+        <div class="panel-head">
+          <h2 tabindex="-1" id="preliminary-title">Предварительные итоги выборов</h2>
+          <button type="button" id="reset-election-adjustments" disabled>Отменить корректировки</button>
+        </div>
         <div id="election-preview-results"></div>
         <section class="campaign-popularity" aria-labelledby="projected-sector-title">
           <h3 id="projected-sector-title">Популярность по секторам после кампании</h3>
@@ -826,7 +831,6 @@
           <h3 id="projected-class-title">Популярность по социальным слоям после кампании</h3>
           <div id="projected-class-charts" class="popularity-charts"></div>
         </section>
-        <div class="actions"><button type="button" id="reset-election-adjustments" disabled>Отменить корректировки</button></div>
         <form id="finish-election-form">
           <label class="confirm"><input type="checkbox" required> Завершить текущий созыв и сформировать новый по итогам выборов</label>
           <div class="actions"><button class="primary">Зафиксировать итоги выборов</button></div>
