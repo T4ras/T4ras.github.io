@@ -1125,6 +1125,7 @@
         <button class="danger" type="button" id="new-game">Новая игра</button>
         <button class="quiet" type="button" id="download-save">Скачать сохранение</button>
         <button class="quiet" type="button" id="open-save">Загрузить файл</button>
+        <a href="https://drive.google.com/file/d/1haopQiUByjhyGoEo4CtBmLzTN_u88p0h/view" target="_blank" rel="noopener">Breaking News</a>
         <input id="save-file" type="file" accept=".json,application/json" hidden>
       </div>
     </section>
