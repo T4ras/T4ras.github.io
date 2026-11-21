@@ -818,6 +818,14 @@
       </form>
       <section class="panel election-preview" id="election-preview" aria-labelledby="preliminary-title" hidden>
         <div id="election-preview-results"></div>
+        <section class="campaign-popularity" aria-labelledby="projected-sector-title">
+          <h3 id="projected-sector-title">Популярность по секторам после кампании</h3>
+          <div id="projected-sector-charts" class="popularity-charts"></div>
+        </section>
+        <section class="campaign-popularity" aria-labelledby="projected-class-title">
+          <h3 id="projected-class-title">Популярность по социальным слоям после кампании</h3>
+          <div id="projected-class-charts" class="popularity-charts"></div>
+        </section>
         <div class="actions"><button type="button" id="reset-election-adjustments" disabled>Отменить корректировки</button></div>
         <form id="finish-election-form">
           <label class="confirm"><input type="checkbox" required> Завершить текущий созыв и сформировать новый по итогам выборов</label>
@@ -842,16 +850,15 @@
         select.dataset.answer, select.value === 'none' ? '' : select.value
       ]))
     ]));
-    function updateProjection() {
+    function updateCampaignOptions() {
       for (const row of all(form, '[data-campaign]')) {
         const main = row.querySelector('[data-answer="main"]').value;
         const secondary = row.querySelector('[data-answer="secondary"]');
         for (const option of secondary.options) option.disabled = option.value !== '' && option.value === main;
         if (main && main === secondary.value) secondary.value = '';
       }
-      renderPopularity(model.electionProjection(state, answers()));
     }
-    function renderPopularity(projection) {
+    function renderPopularity(projection, prefix = '') {
       const sectorGroups = systems.map(({ name }) => ({
         name, image: './assets/' + encodeURIComponent(name) + '.png', shares: projection.bySector[name]
       }));
@@ -860,20 +867,20 @@
       }));
       const peak = Math.max(...[...sectorGroups, ...classGroups].flatMap(group => Object.values(group.shares)));
       const ceiling = Math.max(10, Math.ceil(peak / 10) * 10);
-      byId('sector-charts').innerHTML = popularityCharts(sectorGroups, ceiling);
-      byId('class-charts').innerHTML = popularityCharts(classGroups, ceiling);
+      byId(prefix + 'sector-charts').innerHTML = popularityCharts(sectorGroups, ceiling);
+      byId(prefix + 'class-charts').innerHTML = popularityCharts(classGroups, ceiling);
     }
     form.addEventListener('change', () => {
       preview.hidden = true;
       adjustments = {};
-      updateProjection();
+      updateCampaignOptions();
       campaignDraft = Object.fromEntries(all(form, '[data-campaign]').map(row => [
         row.dataset.campaign, Object.fromEntries(all(row, 'select').map(select => [select.dataset.answer, select.value]))
       ]));
     });
     function renderElectionPreview() {
       const projection = model.electionProjection(state, answers(), adjustments);
-      renderPopularity(projection);
+      renderPopularity(projection, 'projected-');
       results.innerHTML = electionPreview(projection, baseline, adjustments);
       reset.disabled = !Object.values(adjustments).some(Boolean);
     }
@@ -910,7 +917,8 @@
       save(`Созыв № ${state.convocation} сформирован.`, true);
       location.hash = 'statistics';
     });
-    updateProjection();
+    updateCampaignOptions();
+    renderPopularity(model.electionProjection(state));
   }
 
   function renderIndicators() {
