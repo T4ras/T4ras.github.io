@@ -221,9 +221,9 @@
 
   function resolveCrises(state, decisions, senateVotes) {
     const stage = state.crisisStage;
-    const recorded = state.crisisLog.some(item => item.stage === stage);
-    if (state.snapElection || recorded) return false;
-    const questions = crises[stage].questions.filter(question => question.options.length);
+    if (state.snapElection) return false;
+    const recorded = record(state.crisisLog.filter(item => item.stage === stage).map(item => [item.question, item.option]));
+    const questions = crises[stage].questions.filter(question => question.options.length && !Object.hasOwn(recorded, question.id));
     const selected = questions.map(question => question.options.find(option => option.id === decisions[question.id]));
     if (!questions.length || selected.some(option => !option)) return false;
 
@@ -231,7 +231,7 @@
     const requiresVote = selected.some(option => option.senateVote);
     if (requiresVote && (!Number.isInteger(senateVotes) || senateVotes < 0 || senateVotes > total)) return false;
     const army = state.indicators.army;
-    state.nextCrisisStage = nextStage(stage, decisions, army);
+    state.nextCrisisStage = nextStage(stage, { ...decisions, ...recorded }, army);
 
     for (const [index, question] of questions.entries()) {
       const option = selected[index];

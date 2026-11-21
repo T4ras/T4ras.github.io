@@ -679,7 +679,7 @@
     const stage = crises[state.crisisStage];
     const branches = model.crisisBranches(state);
     const resolved = new Map(state.crisisLog.filter(item => item.stage === state.crisisStage).map(item => [item.question, item]));
-    const open = !state.snapElection && !resolved.size && stage.questions.some(question => question.options.length);
+    const open = !state.snapElection && stage.questions.some(question => question.options.length && !resolved.has(question.id));
     const threshold = Math.ceil(total() * 2 / 3);
     const accession = resolved.get('accession');
     const summary = state.snapElection
@@ -703,15 +703,16 @@
         <form id="crisis-form">
       ${stage.questions.length ? `<div class="crisis-grid" tabindex="0" role="group" aria-label="Вопросы кризиса">${stage.questions.map(question => {
         const selected = state.snapElection ? question.options[0]?.id : resolved.get(question.id)?.option;
+        const pending = open && !resolved.has(question.id);
         return `<section class="panel crisis-question">
           <h3 id="crisis-question-${question.id}">${html(question.name)}</h3>
-          ${question.options.length ? `<fieldset aria-labelledby="crisis-question-${question.id}" ${open ? '' : 'disabled'}>
+          ${question.options.length ? `<fieldset aria-labelledby="crisis-question-${question.id}" ${pending ? '' : 'disabled'}>
             <div class="choice-grid">${question.options.map(option => `<label class="choice">
               <input required type="radio" name="${question.id}" value="${option.id}" ${selected === option.id ? 'checked' : ''}>
               <b>${html(option.name)}</b>
             </label>`).join('')}</div>
           </fieldset>` : '<p class="lead">В материале пока нет вариантов ответа.</p>'}
-          ${question.id === 'accession' && open ? `<label id="senate-vote-field" hidden>Голосов Сената за переговоры
+          ${question.id === 'accession' && pending ? `<label id="senate-vote-field" hidden>Голосов Сената за переговоры
             <input id="senate-votes" type="number" min="0" max="${total()}" step="1" aria-describedby="senate-threshold" disabled>
             <span id="senate-threshold">Для начала переговоров нужно ${threshold} голосов.</span></label>` : ''}
           ${!state.snapElection && question.id === 'accession' && accession?.senateVotes !== undefined ? `<p class="lead">За переговоры ${accession.senateVotes} из ${total()}.
