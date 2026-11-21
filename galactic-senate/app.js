@@ -770,7 +770,7 @@
             <strong>${formatPercent(value)}</strong>
             <small class="${signClass(delta)}">${signed(delta)} п. п.</small>
             <div class="election-result-track"><span style="height:${value / peak * 100}%;background:${parties[id].color}"></span></div>
-            <abbr title="${html(parties[id].name)}">${html(id)}</abbr>
+            <span><abbr title="${html(parties[id].name)}">${html(id)}</abbr>${coalition.includes(id) ? ' <small class="no" title="Правительственная партия">(прав.)</small>' : ''}</span>
             <div class="election-adjust">
               ${[-1, 1].map(direction => {
                 const symbol = direction < 0 ? '−' : '+';
