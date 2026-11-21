@@ -22,6 +22,7 @@
   let storageReadable = true;
   const compositionParties = new Set();
   let compositionUnlocked = false;
+  let indicatorsUnlocked = false;
   const readingViews = {
     1: { bill: null, votes: {}, filter: '', selected: new Set() },
     2: { bill: null, votes: {}, filter: '', selected: new Set() }
@@ -69,6 +70,7 @@
     state = archive.active.state;
     compositionParties.clear();
     compositionUnlocked = false;
+    indicatorsUnlocked = false;
     clearReadings();
     campaignDraft = {};
     crisisExpanded = false;
@@ -767,6 +769,7 @@
       model.finishElection(state, answers());
       campaignDraft = {};
       crisisExpanded = false;
+      indicatorsUnlocked = false;
       compositionParties.clear();
       clearReadings();
       save(`Созыв № ${state.convocation} сформирован.`, true);
@@ -777,13 +780,47 @@
 
   function renderIndicators() {
     const titles = { republic: 'Республика', sector: 'Секторы', audience: 'Группы населения' };
-    screen.innerHTML = `<div class="board-grid" aria-label="Показатели Республики">${entries(axes).map(([group, indicators]) =>
+    screen.innerHTML = `<div class="board-toolbar">
+      <button type="button" id="indicator-lock" class="quiet indicator-lock" aria-label="Редактирование показателей"
+        aria-pressed="${indicatorsUnlocked}" title="${indicatorsUnlocked ? 'Зафиксировать показатели' : 'Изменить показатели'}">
+        <span aria-hidden="true">${indicatorsUnlocked ? '🔓' : '🔒'}</span>
+      </button>
+    </div><div class="board-grid" aria-label="Показатели Республики">${entries(axes).map(([group, indicators]) =>
       `<section class="panel"><h3>${titles[group]}</h3>
         <dl class="axis-list">${entries(indicators).map(([id, label]) => {
           const value = state.indicators[id];
-          return `<div><dt>${label}</dt><dd class="${signClass(value)}">${scaleLabel(value)}</dd></div>`;
+          const controls = (step, text, name) => indicatorsUnlocked ? `<button type="button" class="axis-step"
+            data-indicator-step="${step}" aria-label="${name} «${html(label)}»">${text}</button>` : '';
+          return `<div data-axis="${id}"><dt>${html(label)}</dt><dd>
+            ${controls(-1, '−', 'Уменьшить')}
+            <output class="${signClass(value)}" aria-live="polite">${scaleLabel(value)}</output>
+            ${controls(1, '+', 'Увеличить')}
+          </dd></div>`;
         }).join('')}</dl>
       </section>`).join('')}</div>`;
+
+    byId('indicator-lock').addEventListener('click', () => {
+      indicatorsUnlocked = !indicatorsUnlocked;
+      renderIndicators();
+      byId('indicator-lock').focus({ preventScroll: true });
+    });
+    if (!indicatorsUnlocked) return;
+
+    screen.querySelector('.board-grid').addEventListener('click', event => {
+      const button = event.target.closest('[data-indicator-step]');
+      if (!button) return;
+      const row = button.closest('[data-axis]');
+      const id = row.dataset.axis;
+      const value = state.indicators[id] + Number(button.dataset.indicatorStep);
+      if (!Number.isSafeInteger(value)) return;
+      state.indicators[id] = value;
+      const output = row.querySelector('output');
+      output.value = scaleLabel(value);
+      output.className = signClass(value);
+      saves.commit(archive, state, false);
+      storageAvailable = persist();
+      if (!storageAvailable) showNotice('Показатель изменён. Скачайте сохранение, чтобы сохранить изменение после закрытия страницы.');
+    });
   }
 
   function renderSaves() {
