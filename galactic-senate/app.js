@@ -675,8 +675,9 @@
             ${html(crises[key].title)}</option>`).join('')}</select></label>` : ''}
       </div>
       <div id="crisis-body" class="crisis-body">
+        <div class="crisis-content">
         <section class="panel crisis-news">
-          <h3>${html(stage.title)}</h3>
+          <h3 id="crisis-title" tabindex="-1">${html(stage.title)}</h3>
           <p class="lead">${html(stage.news ?? 'Для этой ветки в материалах пока есть только название.')}</p>
         </section>
         <form id="crisis-form">
@@ -700,6 +701,7 @@
         </form>
       <section id="crisis-indicators" class="bureau-indicators" aria-label="Показатели"></section>
       ${protestOptions(state.crisisStage)}
+        </div>
       <div class="actions crisis-actions">
         ${state.snapElection ? '' : '<button class="danger" type="button" id="dissolve">Правительство распущено и назначены досрочные выборы</button>'}
         ${open ? '<button class="primary" type="submit" form="crisis-form">Зафиксировать решения</button>' : ''}
@@ -723,6 +725,10 @@
     toggle.addEventListener('click', () => {
       crisisExpanded = !crisisExpanded;
       updateCrisisVisibility();
+      if (crisisExpanded) {
+        byId('crisis-title').focus({ preventScroll: true });
+        body.scrollIntoView({ block: 'start' });
+      }
     });
     const form = byId('crisis-form');
     const senateBallot = byId('senate-votes');
@@ -855,6 +861,16 @@
     renderPopularity(election, 'final-', election.baseline);
   }
 
+  function randomCampaignAnswers(id) {
+    const pick = options => options[Math.floor(Math.random() * options.length)];
+    const main = pick(socialClasses);
+    return {
+      target: pick(['none', ...partyIds.filter(other => other !== id)]),
+      main,
+      secondary: pick(socialClasses.filter(group => group !== main))
+    };
+  }
+
   function renderCampaign() {
     if (!model.canCampaign(state)) {
       if (state.lastElection) renderElectionFinal(state.lastElection);
@@ -872,6 +888,10 @@
         <div id="class-charts" class="popularity-charts"></div>
       </section>
       <form id="campaign-form" class="panel">
+        <div class="campaign-toolbar">
+          <button type="button" class="quiet" id="roll-campaign" aria-label="Случайно заполнить параметры кампании"
+            title="Случайно заполнить параметры кампании">⚄</button>
+        </div>
         <div class="table-wrap"><table class="campaign-table">
           <thead><tr><th scope="col">Партия</th><th scope="col">Кого винит</th><th scope="col">Основная группа</th>
             <th scope="col">Побочная группа</th></tr></thead>
@@ -927,13 +947,21 @@
         if (main && main === secondary.value) secondary.value = '';
       }
     }
-    form.addEventListener('change', () => {
+    function updateCampaignDraft() {
       preview.hidden = true;
       adjustments = {};
       updateCampaignOptions();
       campaignDraft = Object.fromEntries(all(form, '[data-campaign]').map(row => [
         row.dataset.campaign, Object.fromEntries(all(row, 'select').map(select => [select.dataset.answer, select.value]))
       ]));
+    }
+    form.addEventListener('change', updateCampaignDraft);
+    byId('roll-campaign').addEventListener('click', () => {
+      for (const row of all(form, '[data-campaign]')) {
+        const random = randomCampaignAnswers(row.dataset.campaign);
+        for (const select of all(row, 'select')) select.value = random[select.dataset.answer];
+      }
+      updateCampaignDraft();
     });
     function renderElectionPreview() {
       const projection = model.electionProjection(state, answers(), adjustments);
