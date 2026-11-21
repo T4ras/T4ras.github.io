@@ -100,6 +100,9 @@
       dictionary(state.bills, lawIds, allowed(statuses)) && Array.isArray(state.votes) && state.votes.every(voteValid) &&
       governmentValid(state.government) &&
       (state.dissolvedGovernment === undefined || governmentValid(state.dissolvedGovernment)) &&
+      (state.alienShares === undefined || (dictionary(state.alienShares, [...systemNames, rodia.name],
+        share => Number.isFinite(share) && share >= 0 && share <= 1) &&
+        systemNames.every(system => Object.hasOwn(state.alienShares, system)))) &&
       (state.alienMultiplier === undefined || (Number.isFinite(state.alienMultiplier) && state.alienMultiplier >= 1)) &&
       (state.crisisOnsetConvocation === undefined || (roundNumber(state.crisisOnsetConvocation) && state.crisisOnsetConvocation <= state.convocation)) &&
       (state.rodiaLiberators === undefined || (Array.isArray(state.rodiaLiberators) &&

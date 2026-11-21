@@ -37,7 +37,6 @@ window.senateCatalog = {
       "author": "СГ",
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.d3nm5cazaz52",
       "effects": {
-        "welfare": 1,
         "budget": -1,
         "Relig": 1
       }
@@ -123,7 +122,6 @@ window.senateCatalog = {
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.d3nm5cazaz52",
       "effects": {
         "crime": -1,
-        "welfare": 1,
         "Self": 1
       }
     },
@@ -135,8 +133,7 @@ window.senateCatalog = {
       "author": "СГ",
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.d3nm5cazaz52",
       "effects": {
-        "budget": 1,
-        "Rich": -1
+        "budget": 1
       }
     },
     {
@@ -159,7 +156,8 @@ window.senateCatalog = {
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.3noq6p6k6lha",
       "effects": {
         "Bonus_Alien": 1,
-        "Bonus_Human": -1
+        "Bonus_Human": -1,
+        "image": 1
       }
     },
     {
@@ -192,7 +190,8 @@ window.senateCatalog = {
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.3noq6p6k6lha",
       "effects": {
         "Bonus_Alien": 1,
-        "Rich": -1
+        "Rich": -1,
+        "Farmer": -1
       }
     },
     {
@@ -225,8 +224,8 @@ window.senateCatalog = {
       "author": "МГ",
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.3noq6p6k6lha",
       "effects": {
-        "welfare": 1,
-        "Bonus_Alien": 1
+        "Bonus_Alien": 1,
+        "image": 1
       }
     },
     {
@@ -237,7 +236,8 @@ window.senateCatalog = {
       "author": "МГ",
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.3noq6p6k6lha",
       "effects": {
-        "Bonus_Alien": 1
+        "Bonus_Alien": 1,
+        "image": 1,
       }
     },
     {
@@ -273,8 +273,8 @@ window.senateCatalog = {
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.4q0imc9je728",
       "effects": {
         "Sys_Корусант": -1,
-        "Sys_Танааб": 1,
-        "Sys_Ондерон": 1,
+        "Sys_Танааб": 2,
+        "Sys_Ондерон": 2,
         "budget": 1
       }
     },
@@ -311,7 +311,8 @@ window.senateCatalog = {
       "effects": {
         "welfare": 1,
         "budget": -1,
-        "Farmer": 1
+        "Farmer": 1,
+        "Worker": 1,
       }
     },
     {
@@ -325,7 +326,8 @@ window.senateCatalog = {
         "Sys_Танааб": 1,
         "Sys_Ондерон": 1,
         "Sys_Корусант": -1,
-        "Sys_Чандрила": -1
+        "Sys_Чандрила": 1,
+        "Rich": -1
       }
     },
     {
@@ -349,7 +351,7 @@ window.senateCatalog = {
       "author": "ЛАГ",
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.4q0imc9je728",
       "effects": {
-        "welfare": 1,
+        "authority": -1,
         "Farmer": 1,
         "Middle": 1
       }
@@ -385,7 +387,11 @@ window.senateCatalog = {
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.4q0imc9je728",
       "effects": {
         "Farmer": 1,
-        "budget": 1
+        "budget": 1,
+        "image": -1,
+        "Worker": -1,
+        "Self": -1,
+        "Middle": -1
       }
     },
     {
@@ -409,7 +415,8 @@ window.senateCatalog = {
       "effects": {
         "budget": 1,
         "Farmer": -1,
-        "Rich": -1
+        "Rich": -1,
+        "Sys_Неймодия": -1
       }
     },
     {
@@ -446,7 +453,7 @@ window.senateCatalog = {
       "effects": {
         "budget": 1,
         "image": -1,
-        "Rich": -1
+        "Self": -1
       }
     },
     {
@@ -457,7 +464,6 @@ window.senateCatalog = {
       "id": "ВС-6",
       "effects": {
         "crime": -1,
-        "welfare": 1,
         "Self": 1
       }
     },
@@ -471,7 +477,8 @@ window.senateCatalog = {
       "effects": {
         "welfare": 1,
         "Middle": 1,
-        "Worker": 1
+        "Worker": 1,
+        "Rich": 1
       }
     },
     {
@@ -571,7 +578,6 @@ window.senateCatalog = {
       "author": "ДУ",
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.iq7gtn2rws61",
       "effects": {
-        "welfare": 1,
         "Rich": 1,
         "Middle": 1
       }
@@ -584,8 +590,9 @@ window.senateCatalog = {
       "author": "ДУ",
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.iq7gtn2rws61",
       "effects": {
-        "welfare": 1,
-        "Middle": 1
+        "image": 1,
+        "Middle": 1,
+        "authority": 1
       }
     },
     {
@@ -712,8 +719,7 @@ window.senateCatalog = {
       "author": "ВН",
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.tyv7xprwv43z",
       "effects": {
-        "Worker": 1,
-        "Bonus_Alien": 1
+        "Rich": 1
       }
     },
     {
@@ -738,6 +744,7 @@ window.senateCatalog = {
       "effects": {
         "image": 1,
         "Sys_Неймодия": 1,
+        "Sys_Кореллия": 1,
         "Rich": 1
       }
     },
@@ -747,6 +754,7 @@ window.senateCatalog = {
       "description": "Лица, осуждённые за убийство, работорговлю, пиратство с насилием и прочие тяжелые преступления, навсегда лишаются права голосовать и участвовать в сенатских выборах. \n\nНаши аналитики прогнозируют, что это очистит электорат то синдикатов.",
       "author": "ФГП",
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.6cp3t0l83qig",
+      "alienShareFactor": 0.9,
       "effects": {
         "Self": -1
       }
@@ -1127,7 +1135,8 @@ window.senateCatalog = {
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.ap1j07khzhuj",
       "effects": {
         "crime": 1,
-        "Rich": -1
+        "Rich": -1,
+        "budget": -1
       }
     },
     {
@@ -1152,7 +1161,8 @@ window.senateCatalog = {
       "effects": {
         "crime": -1,
         "image": -1,
-        "Bonus_Alien": 1
+        "Bonus_Alien": 1,
+        "authority": 1
       }
     },
     {
@@ -1176,7 +1186,8 @@ window.senateCatalog = {
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.ap1j07khzhuj",
       "effects": {
         "army": 1,
-        "Worker": -1
+        "Worker": -1,
+        "Sys_Кореллия": -1
       }
     },
     {
@@ -1187,7 +1198,8 @@ window.senateCatalog = {
       "author": "СДК",
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.ap1j07khzhuj",
       "effects": {
-        "Bonus_Alien": 1
+        "Bonus_Alien": 1,
+        "image": 1
       }
     },
     {
@@ -1199,7 +1211,8 @@ window.senateCatalog = {
       "source": "https://docs.google.com/document/d/1seHjIS8rdDilw1FypIyWwX-aItkrnx03ubgnaYjTJus/edit?tab=t.ap1j07khzhuj",
       "effects": {
         "authority": 1,
-        "Bonus_Human": -1
+        "Bonus_Human": -1,
+        "Sys_Чандрила": -1
       }
     },
     {

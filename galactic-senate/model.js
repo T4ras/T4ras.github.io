@@ -97,6 +97,15 @@
     return [...bills.values()];
   }
 
+  function activeSystems(state) {
+    return Object.hasOwn(state.indicators, rodiaAxis) ? [...systems, rodia] : systems;
+  }
+
+  function alienShareIn(system, state) {
+    return state.alienShares?.[system.name] ??
+      (system === rodia ? 1 - rodia.human : Math.min(1, (1 - system.human) * (state.alienMultiplier ?? 1)));
+  }
+
   function recordVote(state, law, positions) {
     const existing = state.bills[law.id];
     if (existing && existing !== 'second') return null;
@@ -108,6 +117,10 @@
     const status = voteOutcome(totals, total, reading);
     state.bills[law.id] = status;
     const changes = status === 'passed' ? applyEffects(state, law.effects) : {};
+    if (status === 'passed' && law.alienShareFactor !== undefined) {
+      state.alienShares = record(activeSystems(state).map(system =>
+        [system.name, alienShareIn(system, state) * law.alienShareFactor]));
+    }
     const popularity = {};
     if (status !== 'second') {
       for (const [id, position] of entries(positions)) {
@@ -163,7 +176,11 @@
     const stage = crises[state.crisisStage];
     if (!state.government || !stage.onset || state.crisisOnsetConvocation === state.convocation) return false;
     state.crisisOnsetConvocation = state.convocation;
-    state.alienMultiplier = (state.alienMultiplier ?? 1) * (1 + stage.onset.alienGrowth);
+    const growth = 1 + stage.onset.alienGrowth;
+    if (state.alienShares) {
+      for (const system of systems) state.alienShares[system.name] = Math.min(1, alienShareIn(system, state) * growth);
+    }
+    state.alienMultiplier = (state.alienMultiplier ?? 1) * growth;
     const changes = applyEffects(state, stage.onset.effects);
     archiveImpacts(state, [{
       type: 'crisis', name: stage.title, source: 'Начало кризиса',
@@ -322,7 +339,7 @@
     return { modifiers, blame };
   }
 
-  function voteShares(modifiers, { indicators = {}, alienMultiplier = 1 } = {}) {
+  function voteShares(modifiers, state) {
     const bySector = {};
     const classTotals = record(socialClasses.map(key => [key, record(partyIds.map(id => [id, 0]))]));
     const totals = record(partyIds.map(id => [id, 0]));
@@ -330,9 +347,8 @@
       const total = sum(Object.values(votes));
       return record(entries(votes).map(([id, score]) => [id, total ? score / total * 100 : 0]));
     };
-    const activeSystems = Object.hasOwn(indicators, rodiaAxis) ? [...systems, rodia] : systems;
-    for (const system of activeSystems) {
-      const alienShare = system === rodia ? 1 - rodia.human : Math.min(1, (1 - system.human) * alienMultiplier);
+    for (const system of activeSystems(state)) {
+      const alienShare = alienShareIn(system, state);
       const humanShare = 1 - alienShare;
       const sector = 'Sys_' + system.name.replace('-', '');
       const sectorVotes = {};
@@ -403,7 +419,8 @@
       const { popularity, bySector, byClass } = state.lastElection;
       return { popularity, bySector, byClass };
     }
-    const { bySector, byClass } = voteShares(initialState().modifiers);
+    const startingState = initialState();
+    const { bySector, byClass } = voteShares(startingState.modifiers, startingState);
     const total = sum(Object.values(state.seats));
     const popularity = record(partyIds.map(id => [id, state.seats[id] / total * 100]));
     return { popularity, bySector, byClass };
