@@ -320,3 +320,10 @@ td select { min-width: 13rem; }
 .axis-history li { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; padding: .35rem 0; }
 .axis-history small { display: block; color: var(--muted); overflow-wrap: anywhere; }
 .axis-history strong { white-space: nowrap; }
+
+.axis-list .dire { color: #ff626c; }
+.axis-list .poor { color: #ff9b9e; }
+.axis-list .fair { color: #ffc7c7; }
+.axis-list .good { color: #bceab9; }
+.axis-list .great { color: #99f38e; }
+.axis-list .excellent { color: #55d76d; }

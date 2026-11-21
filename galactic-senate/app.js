@@ -110,8 +110,14 @@
   const dot = id => `<span class="party-dot" style="--party:${parties[id].color}" aria-hidden="true"></span>`;
   const party = id => dot(id) + html(parties[id].name);
   const options = ids => ids.map(id => `<option value="${id}">${html(parties[id].name)}</option>`).join('');
-  const signs = value => value ? (value > 0 ? '+' : '−').repeat(Math.abs(value)) : '0';
-  const scaleLabel = value => Math.abs(value) > 6 ? signed(value) : signs(value);
+  function indicatorRating(value) {
+    if (value < -4) return ['Плачевно', 'dire'];
+    if (value <= -2) return ['Печально', 'poor'];
+    if (value < 0) return ['Терпимо', 'fair'];
+    if (value < 2) return ['Неплохо', 'good'];
+    if (value < 4) return ['Отлично', 'great'];
+    return ['Великолепно', 'excellent'];
+  }
   const signClass = value => value > 0 ? 'yes' : value < 0 ? 'no' : '';
   const total = () => sum(Object.values(state.seats));
   const orderedParties = () => state.partyOrder ?? partyIds;
@@ -803,11 +809,13 @@
       `<section class="panel"><h3>${titles[group]}</h3>
         <dl class="axis-list">${entries(indicators).map(([id, label]) => {
           const value = state.indicators[id];
+          const [labelText, color] = indicatorsUnlocked || showIndicatorHistory
+            ? [signed(value), signClass(value)] : indicatorRating(value);
           const controls = (step, text, name) => indicatorsUnlocked ? `<button type="button" class="axis-step"
             data-indicator-step="${step}" aria-label="${name} «${html(label)}»">${text}</button>` : '';
           return `<div data-axis="${id}"><dt>${html(label)}</dt><dd>
             ${controls(-1, '−', 'Уменьшить')}
-            <output class="${signClass(value)}" aria-live="polite">${scaleLabel(value)}</output>
+            <output class="${color}" aria-live="polite">${labelText}</output>
             ${controls(1, '+', 'Увеличить')}
           </dd>${historyFor(id)}</div>`;
         }).join('')}</dl>
@@ -834,7 +842,7 @@
       if (!Number.isSafeInteger(value)) return;
       state.indicators[id] = value;
       const output = row.querySelector('output');
-      output.value = scaleLabel(value);
+      output.value = signed(value);
       output.className = signClass(value);
       saves.commit(archive, state, false);
       storageAvailable = persist();
