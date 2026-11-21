@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const { partyIds, axisLabels, constituencies, socialClasses, laws, bureaus, crises, initialState, sum } = window.senateModel;
+  const { partyIds, axisLabels, constituencies, socialClasses, laws, bureaus, crises, initialState, governmentMembers, sum } = window.senateModel;
   const { systems, seats, convocation } = window.senateData;
   const { retiredAxes } = window.senateCatalog;
   const storageKey = 'new-republic-senate-v3';
@@ -109,6 +109,15 @@
 
   function upgradeState(state) {
     if (object(state) && state.crisisStage === undefined) state = { ...state, crisisStage: 'I', nextCrisisStage: null };
+    const activeGovernment = state?.government;
+    if (Array.isArray(activeGovernment?.policies) && activeGovernment.policies.every(bureau =>
+      Array.isArray(bureau) && bureau.every(policy => partyIds.includes(policy?.id)))) {
+      const members = governmentMembers(activeGovernment.policies);
+      const oldMembers = activeGovernment.members;
+      if (!Array.isArray(oldMembers) || oldMembers.length !== members.length || members.some(id => !oldMembers.includes(id))) {
+        state = { ...state, government: { ...activeGovernment, members } };
+      }
+    }
     if (!object(state?.indicators) || !Object.keys(retiredAxes).some(key => Object.hasOwn(state.indicators, key))) return state;
     const { government, votes, crisisLog } = state;
     const upgradeChange = entry => object(entry) ? { ...entry, changes: mergeChanges(entry.changes) } : entry;

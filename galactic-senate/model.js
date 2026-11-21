@@ -99,13 +99,16 @@
     return budget === 0 ? {} : { budget: -Math.sign(budget) * Math.min(strength, Math.abs(budget)), welfare: Math.sign(budget) * strength };
   }
 
-  function acceptGovernment(state, members, distribution) {
-    const coalitionSeats = sum(members.map(id => state.seats[id]));
-    if (state.government || state.snapElection || 2 * coalitionSeats <= sum(Object.values(state.seats))) return false;
+  function governmentMembers(distribution) {
+    return [...new Set(distribution.flatMap(bureau => bureau.map(policy => policy.id)))];
+  }
+
+  function acceptGovernment(state, distribution) {
+    if (state.government || state.snapElection) return false;
     const validDistribution = distribution.length === bureaus.length && distribution.every((bureau, index) =>
       bureau.length >= 1 && bureau.length <= 2 &&
       new Set(bureau.map(policy => policy.author)).size === bureau.length &&
-      bureau.every(policy => policy.bureau === index && members.includes(policy.author)));
+      bureau.every(policy => policy.bureau === index && partyIds.includes(policy.author)));
     if (!validDistribution) return false;
     const effects = {};
     const policiesInForce = distribution.map(bureau => bureau.map(policy => {
@@ -116,7 +119,11 @@
       for (const [key, value] of entries(applied)) effects[key] = (effects[key] ?? 0) + value;
       return { id: policy.author, name: policy.name, effects: applied };
     }));
-    state.government = { members, policies: policiesInForce, changes: applyEffects(state, effects) };
+    state.government = {
+      members: governmentMembers(policiesInForce),
+      policies: policiesInForce,
+      changes: applyEffects(state, effects)
+    };
     return true;
   }
 
@@ -260,6 +267,6 @@
 
   window.senateModel = {
     partyIds, axes, axisLabels, constituencies, socialClasses, laws, policies, bureaus, crises, supportScale,
-    initialState, tally, recordVote, acceptGovernment, resolveCrises, dissolveGovernment, electionProjection, finishElection, sum
+    initialState, tally, recordVote, governmentMembers, acceptGovernment, resolveCrises, dissolveGovernment, electionProjection, finishElection, sum
   };
 })();

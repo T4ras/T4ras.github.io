@@ -452,24 +452,6 @@
 
   const partyCode = id => id === 'СГ' ? 'Г' : id;
 
-  function coalitionRoster(members, editing) {
-    const heading = editing ? 'Участники коалиции' : 'Правящая коалиция';
-    const seats = editing ? 0 : sum(members.map(id => state.seats[id]));
-    return `<section class="panel coalition-roster" aria-label="${heading}">
-      <div class="coalition-heading">
-        <h3>${heading}</h3><p id="coalition-total" class="coalition-total" aria-live="polite">${seats} из ${total()} мандатов</p>
-      </div>
-      <div class="coalition-parties">${members.map(id => {
-        const name = html(parties[id].name);
-        const label = `${dot(id)}<strong>${partyCode(id)}</strong><span>${state.seats[id]}</span>`;
-        return editing ? `<label class="coalition-party" style="--party:${parties[id].color}" title="${name}">
-          <input class="screen-reader-text" type="checkbox" name="member" value="${id}" aria-label="${name} · ${state.seats[id]} мандатов">
-          ${label}
-        </label>` : `<span class="coalition-party" title="${name}">${label}</span>`;
-      }).join('')}</div>
-    </section>`;
-  }
-
   function bureauOwner(name, index, slot) {
     const second = slot === 2;
     return `<div class="bureau-owner" data-owner-slot="${slot}" ${second ? `id="second-owner-${index}" hidden` : ''}>
@@ -492,27 +474,24 @@
       return;
     }
     if (state.government) {
-      const { members, policies: enacted } = state.government;
-      screen.innerHTML = coalitionRoster(members, false) + `<div class="bureau-grid">${bureaus.map((name, index) =>
+      const { policies: enacted } = state.government;
+      screen.innerHTML = `<div class="bureau-grid">${bureaus.map((name, index) =>
         `<article class="panel bureau"><h3>${name}</h3>${enacted[index].map(policy =>
           `<div class="bureau-owner"><span class="bureau-owner-code" title="${html(parties[policy.id].name)}">${dot(policy.id)}${partyCode(policy.id)}</span>
           <p class="owner-policy">${html(policy.name)}</p></div>`).join('')}</article>`).join('')}</div>`;
       return;
     }
     screen.innerHTML = `<form id="coalition">
-      ${coalitionRoster(orderedParties(), true)}
       <div class="bureau-grid">${bureaus.map((name, index) => `<section class="panel bureau" data-bureau="${index}">
         <h3>${name}</h3>
         ${bureauOwner(name, index, 1)}
         ${bureauOwner(name, index, 2)}
       </section>`).join('')}</div>
-      <div class="actions"><button class="primary" type="submit">Утвердить коалицию и политику</button></div>
+      <div class="actions"><button class="primary" type="submit">Утвердить правительство</button></div>
     </form>`;
     const form = byId('coalition');
     const cards = all(form, '.bureau');
     const submit = form.querySelector('[type="submit"]');
-    const majority = Math.floor(total() / 2) + 1;
-    const selectedMembers = () => all(form, '[name="member"]:checked').map(input => input.value);
     const policyFor = (id, bureau) => policies.find(item => item.bureau === Number(bureau.dataset.bureau) && item.author === id);
 
     function updateOwner(select, available, bureau) {
@@ -529,14 +508,11 @@
     }
 
     function updateOwners() {
-      const members = selectedMembers();
-      const count = sum(members.map(id => state.seats[id]));
-      byId('coalition-total').textContent = `${count} из ${total()} мандатов · ${count >= majority ? 'большинство' : 'нужно ' + majority}`;
       for (const card of cards) {
         const [first, second] = all(card, '[data-owner]');
         const secondRow = second.closest('.bureau-owner');
         const toggle = card.querySelector('[data-add-owner]');
-        const available = members.filter(id => policyFor(id, card));
+        const available = orderedParties().filter(id => policyFor(id, card));
         updateOwner(first, available, card);
         if (!first.value) secondRow.hidden = true;
         const expanded = !secondRow.hidden;
@@ -548,11 +524,11 @@
         second.disabled = !expanded;
         updateOwner(second, expanded ? available.filter(id => id !== first.value) : [], card);
       }
-      submit.disabled = count < majority || all(form, '[data-owner]:required').some(select => !select.value);
+      submit.disabled = all(form, '[data-owner]:required').some(select => !select.value);
     }
 
     form.addEventListener('change', event => {
-      if (event.target.matches('[name="member"], [data-owner]')) updateOwners();
+      if (event.target.matches('[data-owner]')) updateOwners();
     });
     form.addEventListener('click', event => {
       const toggle = event.target.closest('[data-add-owner]');
@@ -567,8 +543,8 @@
       if (submit.disabled) return;
       const distribution = cards.map(bureau =>
         all(bureau, '[data-owner]').map(select => policyFor(select.value, bureau)).filter(Boolean));
-      if (model.acceptGovernment(state, selectedMembers(), distribution)) {
-        save('Коалиция утверждена. Политика Бюро вступила в силу.');
+      if (model.acceptGovernment(state, distribution)) {
+        save('Правительство утверждено. Политика Бюро вступила в силу.');
       }
     });
     updateOwners();
