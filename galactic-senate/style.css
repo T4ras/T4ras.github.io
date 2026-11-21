@@ -360,3 +360,5 @@ td select { min-width: 13rem; }
 .popularity-chart.with-change .popularity-chart-heading { margin-bottom: 2.4rem; }
 .popularity-chart-value { text-align: center; }
 .popularity-chart-value small { display: block; font-size: .62rem; }
+
+.bureau-indicators { margin-top: 1.35rem; }

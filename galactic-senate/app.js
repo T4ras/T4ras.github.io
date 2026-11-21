@@ -563,6 +563,7 @@
     if (state.snapElection) {
       screen.innerHTML = '';
       appendCrisis();
+      appendBureauIndicators();
       return;
     }
     if (state.government) {
@@ -572,6 +573,7 @@
           `<div class="bureau-owner"><span class="bureau-owner-code" title="${html(parties[policy.id].name)}">${dot(policy.id)}${partyCode(policy.id)}</span>
           <p class="owner-policy">${html(policy.name)}</p></div>`).join('')}</article>`).join('')}</div>`;
       appendCrisis();
+      appendBureauIndicators();
       return;
     }
     screen.innerHTML = `<form id="coalition">
@@ -642,6 +644,7 @@
       }
     });
     updateOwners();
+    appendBureauIndicators();
   }
 
   function appendCrisis() {
@@ -955,7 +958,15 @@
     renderPopularity(model.electionProjection(state));
   }
 
-  function renderIndicators() {
+  function appendBureauIndicators() {
+    const board = document.createElement('section');
+    board.className = 'bureau-indicators';
+    board.setAttribute('aria-label', 'Указатели');
+    screen.append(board);
+    renderIndicators(board);
+  }
+
+  function renderIndicators(root = screen) {
     const titles = { republic: 'Республика', sector: 'Секторы', audience: 'Группы населения' };
     const history = showIndicatorHistory ? model.indicatorHistory(state) : [];
     const types = { bill: 'Законопроект', policy: 'Политика Бюро', crisis: 'Кризис' };
@@ -968,7 +979,7 @@
       return '<dd class="axis-history">' + (rows ? '<ul>' + rows + '</ul>' :
         '<span class="muted">Нет записей</span>') + '</dd>';
     }
-    screen.innerHTML = `<div class="board-toolbar">
+    root.innerHTML = `<div class="board-toolbar">
       <button type="button" id="indicator-eye" class="quiet indicator-lock" aria-label="История изменений" aria-pressed="${showIndicatorHistory}" title="История изменений"><span aria-hidden="true">👁</span></button>
       <button type="button" id="indicator-lock" class="quiet indicator-lock" aria-label="Редактирование показателей"
         aria-pressed="${indicatorsUnlocked}" title="${indicatorsUnlocked ? 'Зафиксировать показатели' : 'Изменить показатели'}">
@@ -992,17 +1003,17 @@
 
     byId('indicator-eye').addEventListener('click', () => {
       showIndicatorHistory = !showIndicatorHistory;
-      renderIndicators();
+      renderIndicators(root);
       byId('indicator-eye').focus({ preventScroll: true });
     });
     byId('indicator-lock').addEventListener('click', () => {
       indicatorsUnlocked = !indicatorsUnlocked;
-      renderIndicators();
+      renderIndicators(root);
       byId('indicator-lock').focus({ preventScroll: true });
     });
     if (!indicatorsUnlocked) return;
 
-    screen.querySelector('.board-grid').addEventListener('click', event => {
+    root.querySelector('.board-grid').addEventListener('click', event => {
       const button = event.target.closest('[data-indicator-step]');
       if (!button) return;
       const row = button.closest('[data-axis]');
