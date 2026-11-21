@@ -87,7 +87,7 @@
       }
     }
     state.votes.push({
-      name: law.name, author: law.author, convocation: state.convocation,
+      billId: law.id, name: law.name, author: law.author, convocation: state.convocation,
       reading, status, seats: { ...state.seats }, positions, totals, changes,
       proposed: { ...law.effects }, popularity
     });

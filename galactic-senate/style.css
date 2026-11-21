@@ -180,7 +180,6 @@ td select { min-width: 13rem; }
   .actions .primary { width: 100%; }
 }
 
-.bill-summary { white-space: pre-line; color: var(--muted); }
 .campaign-table th, .campaign-table td { padding-inline: .48rem; }
 .campaign-table td select { min-width: 10rem; font-size: .9rem; }
 .campaign-table td:nth-last-child(-n + 2) { white-space: nowrap; }
@@ -194,13 +193,12 @@ td select { min-width: 13rem; }
 .law-suggestions small { display: block; font-size: .85rem; color: var(--muted); }
 #law-search-status { margin-top: .35rem; }
 
-.vote-flag { display: grid; grid-template-columns: 2rem minmax(0, 1fr); align-items: center; gap: .35rem; min-height: 2.4rem; padding: .3rem .45rem .3rem .25rem; border: 1px solid #425675; border-radius: 5px; color: var(--text); background: var(--field); font-size: .85rem; text-align: left; }
+.vote-flag { display: flex; flex: 1; min-width: 0; align-items: center; justify-content: space-between; gap: .45rem; min-height: 2.4rem; padding: .32rem .55rem; border: 1px solid #425675; border-radius: 5px; color: var(--text); background: var(--field); font-size: .85rem; text-align: left; }
 .vote-flag:hover { border-color: var(--text); }
 .vote-flag[data-position="yes"] { background: #15352e; border-color: #5aaf91; }
 .vote-flag[data-position="no"] { background: #3a252c; border-color: #c16e7a; }
 .vote-flag[data-position="yes"] .flag-position { color: var(--yes); }
 .vote-flag[data-position="no"] .flag-position { color: var(--no); }
-.flag-banner { display: grid; place-items: center; padding: .2rem .4rem .2rem .15rem; background: var(--party); color: #050b11; font-weight: 800; clip-path: polygon(0 0, 100% 0, 85% 50%, 100% 100%, 0 100%); }
 .flag-position { text-align: right; color: var(--abstain); }
 .primary:disabled { cursor: default; background: #263143; color: var(--muted); }
 
@@ -243,20 +241,15 @@ td select { min-width: 13rem; }
   margin-top: .75rem; padding-top: .55rem; border-top: 1px solid var(--stroke); color: var(--muted);
 }
 .seat-total output { color: var(--accent); font-size: 1.45rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.seat-list .vote-flag { flex: 0 0 8.6rem; }
 .flag-position { white-space: nowrap; font-size: .76rem; }
 .reading-threshold { margin-bottom: .7rem; text-align: right; }
 .bill-card { margin-bottom: 1rem; text-align: center; }
 .bill-card h2 { font: 700 clamp(1.35rem, 3vw, 2.3rem)/1.2 var(--display); color: var(--accent); }
 .bill-card > p { margin-top: .4rem; color: var(--muted); }
-.bill-card details { max-width: 65ch; margin: .8rem auto 0; }
-.bill-card details[open] { text-align: left; }
-.bill-card .chips { margin-top: .55rem; }
 
 @media (max-width: 600px) {
   .composition .seat-list { grid-template-columns: 1fr; }
   .seat-choice { font-size: .9rem; }
-  .seat-list .vote-flag { flex-basis: 7.9rem; grid-template-columns: 1.6rem minmax(0, 1fr); }
 }
 
 .drag-help { margin: .75rem 0 0; }
@@ -288,4 +281,15 @@ td select { min-width: 13rem; }
   .bureau { padding: .65rem .55rem; }
   .bureau h3 { font-size: .95rem; }
   .bureau-select select { width: 4.15rem; padding-right: 1.15rem; }
+}
+
+.vote-party-name { overflow-wrap: anywhere; }
+.seat-count { flex: 0 0 3.25rem; justify-content: center; }
+.bill-outcomes { margin-top: 1rem; }
+.bill-outcomes h3 { margin-bottom: .45rem; }
+.bill-outcomes td { min-width: 10rem; }
+.bill-outcomes .tag { display: inline-block; }
+.bill-outcome-party { display: inline-block; margin-left: .4rem; color: var(--muted); font-size: .85rem; white-space: nowrap; }
+@media (max-width: 430px) {
+  .vote-flag { flex-wrap: wrap; gap: .15rem .45rem; }
 }

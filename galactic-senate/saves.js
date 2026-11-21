@@ -39,7 +39,7 @@
   const shares = value => dictionary(value, partyIds, percent => Number.isFinite(percent) && percent >= 0 && percent <= 100, true);
 
   function voteValid(vote) {
-    return object(vote) && name(vote.name) && partyIds.includes(vote.author) && roundNumber(vote.convocation) &&
+    return object(vote) && (vote.billId === undefined || lawIds.includes(vote.billId)) && name(vote.name) && partyIds.includes(vote.author) && roundNumber(vote.convocation) &&
       [1, 2].includes(vote.reading) && statuses.includes(vote.status) && seatMap(vote.seats) &&
       dictionary(vote.positions, partyIds, allowed(positions), true) &&
       dictionary(vote.totals, positions, nonnegative, true) && sum(Object.values(vote.totals)) === seatCount &&

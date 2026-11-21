@@ -157,13 +157,14 @@
   function partyCalculator(selected, voting = false) {
     return `<div id="party-calculator" class="party-calculator">
       <ul class="seat-list" aria-label="Партии и мандаты">${orderedParties().map(id => `<li>
-        <button class="seat-choice" type="button" data-seat-party="${id}" aria-pressed="${selected.has(id)}">
-          <span>${party(id)}</span><b>${state.seats[id]}</b>
-        </button>
         ${voting ? `<button type="button" class="vote-flag" data-party="${id}" data-position="abstain">
-          <span class="flag-banner" style="--party:${parties[id].color}" aria-hidden="true">${id === 'СГ' ? 'Г' : id}</span>
+          <span class="vote-party-name">${party(id)}</span>
           <strong class="flag-position">${flagLabels.abstain}</strong>
         </button>` : ''}
+        <button class="seat-choice${voting ? ' seat-count' : ''}" type="button" data-seat-party="${id}" aria-pressed="${selected.has(id)}"
+          ${voting ? `aria-label="Места партии ${html(parties[id].name)} в калькуляторе · ${state.seats[id]}"` : ''}>
+          ${voting ? '' : `<span>${party(id)}</span>`}<b>${state.seats[id]}</b>
+        </button>
       </li>`).join('')}</ul>
       <div class="seat-total"><span>Сумма мест</span>
         <output id="seat-total" aria-live="polite">${format(sum([...selected].map(id => state.seats[id])))}</output>
@@ -360,14 +361,13 @@
     });
   }
 
-  const flagLabels = { yes: 'За', no: 'Против', abstain: 'Воздержалась' };
-  const flagCycle = { abstain: 'yes', yes: 'no', no: 'abstain' };
+  const flagLabels = { yes: 'Да', no: 'Против', abstain: 'Воздержалась' };
 
   function updateFlag(button, position) {
     const id = button.dataset.party;
     button.dataset.position = position;
     button.querySelector('.flag-position').textContent = flagLabels[position];
-    button.setAttribute('aria-label', `${parties[id].name}. ${flagLabels[position]}. Следующий голос: ${flagLabels[flagCycle[position]]}`);
+    button.setAttribute('aria-label', `${parties[id].name}. ${flagLabels[position]}.`);
   }
 
   function billCard(law) {
@@ -375,21 +375,39 @@
     return `<section class="panel bill-card" aria-label="Законопроект на рассмотрении">
       <h2 id="current-bill" tabindex="-1">${html(law.name)}</h2>
       <p>${party(law.author)} · ${reading} чтение</p>
-      <details><summary>Описание законопроекта</summary>
-        <p class="bill-summary">${html(law.description)}</p>
-        <div class="chips">${effectsReadout(law.effects)}</div>
-      </details>
     </section>`;
   }
 
   function voteForm(law) {
     const reading = state.bills[law.id] === 'second' ? 2 : 1;
     return `<form id="vote-form" class="panel stack">
+      <p class="muted vote-controls">ЛКМ — да. ПКМ — против. Двойное нажатие — воздержаться.</p>
       ${partyCalculator(readingParties, true)}
       <div class="tally" id="tally" aria-live="polite"></div>
       ${reading === 2 ? '<p class="muted">Во втором чтении у каждой партии должен быть голос за или против.</p>' : ''}
       <button class="primary" type="submit">Зафиксировать голосование</button>
     </form>`;
+  }
+
+  function billOutcomes() {
+    const results = new Map();
+    for (const vote of state.votes) {
+      if (vote.convocation !== state.convocation) continue;
+      const id = vote.billId ?? laws.find(law => law.name === vote.name && law.author === vote.author)?.id ??
+        JSON.stringify([vote.author, vote.name]);
+      const bill = results.get(id) ?? { name: vote.name, author: vote.author, readings: {} };
+      bill.readings[vote.reading] = vote.status;
+      results.set(id, bill);
+    }
+    const status = value => value ? `<span class="tag ${value}">${statusText[value]}</span>` : '—';
+    const rows = [...results.values()].map(bill => `<tr>
+      <th scope="row">${html(bill.name)} <span class="bill-outcome-party" title="${html(parties[bill.author].name)}">${dot(bill.author)}${partyCode(bill.author)}</span></th>
+      <td>${status(bill.readings[1])}</td><td>${status(bill.readings[2])}</td></tr>`).join('');
+    return `<section class="panel bill-outcomes"><h3>Судьба законопроектов</h3>
+      ${rows ? `<div class="table-wrap"><table><thead><tr>
+        <th scope="col">Законопроект</th><th scope="col">I чтение</th><th scope="col">II чтение</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="muted">В этом созыве ещё не голосовали.</p>'}
+    </section>`;
   }
 
   function renderReading() {
@@ -403,7 +421,7 @@
     </section>`;
     const calculator = law ? voteForm(law) : `<section class="panel">${partyCalculator(readingParties)}</section>`;
     screen.innerHTML = search + (law ? billCard(law) : '') +
-      `<div class="split senate-layout">${chart}${calculator}</div>`;
+      `<div class="split senate-layout">${chart}${calculator}</div>` + billOutcomes();
     setupCalculator(readingParties);
     if (state.snapElection) return;
 
@@ -432,13 +450,33 @@
     }
     for (const flag of flags) updateFlag(flag, voteDraft[flag.dataset.party] ?? 'abstain');
     updateTally();
-    form.addEventListener('click', event => {
-      const flag = event.target.closest('.vote-flag');
-      if (!flag) return;
-      const position = flagCycle[flag.dataset.position];
+    let previousClick = null;
+    const doubleClickWindow = 500;
+    function applyVote(flag, position) {
       voteDraft[flag.dataset.party] = position;
       updateFlag(flag, position);
       updateTally();
+    }
+
+    function pointerVote(event, position) {
+      const flag = event.target.closest('.vote-flag');
+      if (!flag) return;
+      if (event.type === 'contextmenu') event.preventDefault();
+      const id = flag.dataset.party;
+      const double = previousClick?.id === id && previousClick.position === position &&
+        event.timeStamp - previousClick.at <= doubleClickWindow;
+      previousClick = double ? null : { id, position, at: event.timeStamp };
+      applyVote(flag, double ? 'abstain' : position);
+    }
+
+    form.addEventListener('click', event => pointerVote(event, 'yes'));
+    form.addEventListener('contextmenu', event => pointerVote(event, 'no'));
+    form.addEventListener('keydown', event => {
+      const flag = event.target.closest('.vote-flag');
+      if (!flag || event.key !== 'Delete') return;
+      event.preventDefault();
+      previousClick = null;
+      applyVote(flag, 'abstain');
     });
     form.addEventListener('submit', event => {
       event.preventDefault();
