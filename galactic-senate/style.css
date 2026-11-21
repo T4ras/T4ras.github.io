@@ -202,7 +202,10 @@ td select { min-width: 13rem; }
 .flag-position { text-align: right; color: var(--abstain); }
 .primary:disabled { cursor: default; background: #263143; color: var(--muted); }
 
-.crisis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.crisis-grid {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(min(100%, 17rem), 1fr);
+  gap: .75rem; overflow-x: auto; padding-bottom: .35rem;
+}
 .crisis-question .choice { min-height: 3.5rem; }
 .crisis-question fieldset:disabled .choice { cursor: default; }
 .crisis-question fieldset:disabled .choice:not(:has(:checked)) { opacity: .7; }
@@ -210,9 +213,10 @@ td select { min-width: 13rem; }
 .danger { background: #a72d3c; color: #fff; border-color: #da6570; font-weight: 700; min-height: 2.7rem; }
 .danger:hover { background: #be3b4a; }
 @media (max-width: 720px) {
-  .law-search, .crisis-grid { grid-template-columns: 1fr; }
+  .law-search { grid-template-columns: 1fr; }
 }
 
+.crisis-phase { margin-top: 1rem; }
 .crisis-news { margin-bottom: 1rem; }
 .crisis-news a { display: inline-block; margin-top: .55rem; }
 

@@ -553,7 +553,8 @@
 
   function renderBureaus() {
     if (state.snapElection) {
-      screen.innerHTML = '<div class="panel empty">Правительство распущено. Назначены досрочные выборы.</div>';
+      screen.innerHTML = '';
+      appendCrisis();
       return;
     }
     if (state.government) {
@@ -562,6 +563,7 @@
         `<article class="panel bureau"><h3>${name}</h3>${enacted[index].map(policy =>
           `<div class="bureau-owner"><span class="bureau-owner-code" title="${html(parties[policy.id].name)}">${dot(policy.id)}${partyCode(policy.id)}</span>
           <p class="owner-policy">${html(policy.name)}</p></div>`).join('')}</article>`).join('')}</div>`;
+      appendCrisis();
       return;
     }
     screen.innerHTML = `<form id="coalition">
@@ -628,12 +630,13 @@
         all(bureau, '[data-owner]').map(select => policyFor(select.value, bureau)).filter(Boolean));
       if (model.acceptGovernment(state, distribution)) {
         save('Правительство утверждено. Политика Бюро вступила в силу.');
+        byId('crisis-title')?.focus();
       }
     });
     updateOwners();
   }
 
-  function renderCrisis() {
+  function appendCrisis() {
     const stage = crises[state.crisisStage];
     const resolved = new Map(state.crisisLog.filter(item => item.stage === state.crisisStage).map(item => [item.question, item]));
     const open = !state.snapElection && !resolved.size && stage.questions.some(question => question.options.length);
@@ -642,12 +645,13 @@
     const summary = state.snapElection
       ? '<div class="notice">Правительство распущено. Перейдите к <a href="#campaign">досрочной кампании</a>.</div>'
       : '';
-    screen.innerHTML = summary + `<section class="panel crisis-news">
-      <h3>${html(stage.title)}</h3>
+    screen.insertAdjacentHTML('beforeend', `<section class="crisis-phase" aria-labelledby="crisis-title">
+    ${summary}<section class="panel crisis-news">
+      <h3 id="crisis-title" tabindex="-1">${html(stage.title)}</h3>
       <p class="lead">${html(stage.news ?? 'Для этой ветки в материалах пока есть только название.')}</p>
       ${stage.video ? `<a href="${stage.video}" target="_blank" rel="noopener">Видео новостей</a>` : ''}
     </section><form id="crisis-form">
-      <div class="crisis-grid">${stage.questions.map(question => {
+      ${stage.questions.length ? `<div class="crisis-grid" tabindex="0" role="group" aria-label="Вопросы кризиса">${stage.questions.map(question => {
         const decision = resolved.get(question.id);
         return `<section class="panel crisis-question">
           <h3>${html(question.name)}</h3>
@@ -663,12 +667,12 @@
           ${question.id === 'accession' && accession?.senateVotes !== undefined ? `<p class="lead">За переговоры ${accession.senateVotes} из ${total()}.
             ${accession.passed ? 'Переговоры одобрены.' : 'Порог голосов не достигнут.'}</p>` : ''}
         </section>`;
-      }).join('')}</div>
+      }).join('')}</div>` : ''}
       <div class="actions crisis-actions">
         ${state.snapElection ? '' : '<button class="danger" type="button" id="dissolve">Правительство распущено и назначены досрочные выборы</button>'}
         ${open ? '<button class="primary" type="submit">Зафиксировать решения</button>' : ''}
       </div>
-    </form>`;
+    </form></section>`);
     const form = byId('crisis-form');
     const senateBallot = byId('senate-votes');
     if (senateBallot) {
@@ -855,10 +859,10 @@
     }
   }
 
-  const views = { senate: renderComposition, reading: renderReading, bureaus: renderBureaus, crisis: renderCrisis, campaign: renderCampaign, statistics: renderStatistics, saves: renderSaves };
+  const views = { senate: renderComposition, reading: renderReading, bureaus: renderBureaus, campaign: renderCampaign, statistics: renderStatistics, saves: renderSaves };
   function render() {
     const hash = location.hash.slice(1);
-    const page = Object.hasOwn(views, hash) ? hash : 'senate';
+    const page = hash === 'crisis' ? 'bureaus' : Object.hasOwn(views, hash) ? hash : 'senate';
     for (const link of all(document, '.navigation a, .saves-link')) {
       if (link.hash === '#' + page) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
