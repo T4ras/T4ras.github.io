@@ -218,7 +218,8 @@ td select { min-width: 13rem; }
 
 .crisis-phase { margin-top: 1rem; }
 .crisis-news { margin-bottom: 1rem; }
-.crisis-news a { display: inline-block; margin-top: .55rem; }
+.crisis-news-row { display: flex; align-items: center; gap: .6rem; }
+.crisis-body { margin-top: .8rem; }
 
 .composition { max-width: 1080px; margin-inline: auto; }
 .composition .chamber { max-width: 920px; }
@@ -270,11 +271,11 @@ td select { min-width: 13rem; }
 .bureau-select { display: flex; align-items: center; gap: .35rem; }
 .owner-dot { background: #53647c; width: .65rem; height: .65rem; border-radius: 50%; }
 .bureau-select select { width: 5rem; min-height: 2rem; margin: 0; padding: .2rem 1.35rem .2rem .4rem; }
-.add-owner {
+.add-owner, .crisis-toggle {
   display: grid; place-items: center; width: 2rem; height: 2rem; padding: 0;
   background: #29231a; color: var(--accent); font-size: 1.25rem; line-height: 1;
 }
-.add-owner:hover:not(:disabled) { background: #48371d; }
+.add-owner:hover:not(:disabled), .crisis-toggle:hover { background: #48371d; }
 .add-owner:disabled { cursor: default; opacity: .38; }
 .bureau-owner-code { color: var(--accent); font-weight: 650; }
 .owner-policy { margin-top: .45rem; font-size: .92rem; line-height: 1.3; overflow-wrap: anywhere; }

@@ -27,6 +27,7 @@
     2: { bill: null, votes: {}, filter: '', selected: new Set() }
   };
   let campaignDraft = {};
+  let crisisExpanded = false;
   try {
     archive = saves.read(localStorage);
   } catch {
@@ -70,6 +71,7 @@
     compositionUnlocked = false;
     clearReadings();
     campaignDraft = {};
+    crisisExpanded = false;
     announceSave(message);
   }
 
@@ -630,7 +632,7 @@
         all(bureau, '[data-owner]').map(select => policyFor(select.value, bureau)).filter(Boolean));
       if (model.acceptGovernment(state, distribution)) {
         save('Правительство утверждено. Политика Бюро вступила в силу.');
-        byId('crisis-title')?.focus();
+        byId('crisis-toggle')?.focus();
       }
     });
     updateOwners();
@@ -645,12 +647,18 @@
     const summary = state.snapElection
       ? '<div class="notice">Правительство распущено. Перейдите к <a href="#campaign">досрочной кампании</a>.</div>'
       : '';
-    screen.insertAdjacentHTML('beforeend', `<section class="crisis-phase" aria-labelledby="crisis-title">
-    ${summary}<section class="panel crisis-news">
-      <h3 id="crisis-title" tabindex="-1">${html(stage.title)}</h3>
-      <p class="lead">${html(stage.news ?? 'Для этой ветки в материалах пока есть только название.')}</p>
-      ${stage.video ? `<a href="${stage.video}" target="_blank" rel="noopener">Видео новостей</a>` : ''}
-    </section><form id="crisis-form">
+    screen.insertAdjacentHTML('beforeend', `<section class="crisis-phase" aria-label="Новости">
+      ${summary}
+      <div class="crisis-news-row">
+        ${stage.video ? `<a href="${stage.video}" target="_blank" rel="noopener">Новости</a>` : '<span>Новости</span>'}
+        <button type="button" id="crisis-toggle" class="crisis-toggle" aria-controls="crisis-body"></button>
+      </div>
+      <div id="crisis-body" class="crisis-body">
+        <section class="panel crisis-news">
+          <h3>${html(stage.title)}</h3>
+          <p class="lead">${html(stage.news ?? 'Для этой ветки в материалах пока есть только название.')}</p>
+        </section>
+        <form id="crisis-form">
       ${stage.questions.length ? `<div class="crisis-grid" tabindex="0" role="group" aria-label="Вопросы кризиса">${stage.questions.map(question => {
         const decision = resolved.get(question.id);
         return `<section class="panel crisis-question">
@@ -672,7 +680,20 @@
         ${state.snapElection ? '' : '<button class="danger" type="button" id="dissolve">Правительство распущено и назначены досрочные выборы</button>'}
         ${open ? '<button class="primary" type="submit">Зафиксировать решения</button>' : ''}
       </div>
-    </form></section>`);
+    </form></div></section>`);
+    const toggle = byId('crisis-toggle');
+    const body = byId('crisis-body');
+    function updateCrisisVisibility() {
+      toggle.textContent = crisisExpanded ? '−' : '+';
+      toggle.setAttribute('aria-expanded', String(crisisExpanded));
+      toggle.setAttribute('aria-label', crisisExpanded ? 'Свернуть кризис' : 'Раскрыть кризис');
+      body.hidden = !crisisExpanded;
+    }
+    updateCrisisVisibility();
+    toggle.addEventListener('click', () => {
+      crisisExpanded = !crisisExpanded;
+      updateCrisisVisibility();
+    });
     const form = byId('crisis-form');
     const senateBallot = byId('senate-votes');
     if (senateBallot) {
@@ -749,6 +770,7 @@
       event.preventDefault();
       model.finishElection(state, answers());
       campaignDraft = {};
+      crisisExpanded = false;
       compositionParties.clear();
       clearReadings();
       save(`Созыв № ${state.convocation} сформирован.`, true);
