@@ -721,14 +721,19 @@
     });
   }
 
+  function shareChange(value, baseline) {
+    const delta = Math.round((value - baseline) * 10) / 10;
+    return `<small class="${signClass(delta)}">${signed(delta)} п. п.</small>`;
+  }
+
   function popularityCharts(groups, ceiling) {
-    return groups.map(({ name, image, shares }) => {
+    return groups.map(({ name, image, shares, baseline }) => {
       let zeroCount = 0;
       const ranked = partyIds.map(id => {
         const displayedShare = shares[id] < 0.05 ? (zeroCount++ % 3 + 1) / 10 : shares[id];
         return { id, displayedShare };
       }).sort((a, b) => b.displayedShare - a.displayedShare);
-      return `<article class="panel popularity-chart">
+      return `<article class="panel popularity-chart ${baseline ? 'with-change' : ''}">
         <header class="popularity-chart-heading">
           <img class="popularity-image" src="${image}" width="64" height="64" alt="">
           <h3>${html(name)}</h3>
@@ -738,7 +743,7 @@
             const share = formatPercent(displayedShare);
             return `<div class="popularity-chart-column" style="--bar-height:${displayedShare / ceiling * 100}%;--party-color:${parties[id].color}"
               title="${html(parties[id].name)} — ${share}">
-              <span class="popularity-chart-bar"><span class="popularity-chart-value">${share}</span></span>
+              <span class="popularity-chart-bar"><span class="popularity-chart-value">${share}${baseline ? shareChange(shares[id], baseline[id]) : ''}</span></span>
               <abbr class="popularity-chart-party" title="${html(parties[id].name)}">${html(id)}</abbr>
             </div>`;
           }).join('')}
@@ -747,12 +752,36 @@
     }).join('');
   }
 
-  function electionPreview({ popularity, seats }, baseline, adjustments) {
+  function electionResultsChart(popularity, baseline, coalition, adjustments) {
     const ranking = [...partyIds].sort((a, b) => popularity[b] - popularity[a]);
     const peak = Math.max(1, ...Object.values(popularity));
-    const coalition = state.government?.members ?? [];
     const coalitionShare = sum(coalition.map(id => popularity[id]));
-    const coalitionDelta = Math.round((coalitionShare - sum(coalition.map(id => baseline[id]))) * 10) / 10;
+    const coalitionBaseline = sum(coalition.map(id => baseline[id]));
+    return `<div class="table-wrap"><div class="election-results-chart">
+        ${ranking.map(id => {
+          const value = popularity[id];
+          const steps = adjustments?.[id] ?? 0;
+          return `<div class="election-result" title="${html(parties[id].name)}">
+            <strong>${formatPercent(value)}</strong>
+            ${shareChange(value, baseline[id])}
+            <div class="election-result-track"><span style="height:${value / peak * 100}%;background:${parties[id].color}"></span></div>
+            <span><abbr title="${html(parties[id].name)}">${html(id)}</abbr>${coalition.includes(id) ? ' <small class="no" title="Правительственная партия">(прав.)</small>' : ''}</span>
+            ${adjustments ? `<div class="election-adjust">
+              ${[-1, 1].map(direction => {
+                const symbol = direction < 0 ? '−' : '+';
+                const limit = direction < 0 && steps <= -10;
+                return `<button type="button" data-adjust="${id}" data-direction="${direction}"
+                  aria-label="${html(parties[id].name)} ${symbol}10% к положительным рейтингам" ${limit ? 'disabled' : ''}>${symbol}</button>`;
+              }).join('')}
+            </div>` : ''}
+          </div>`;
+        }).join('')}
+      </div></div>
+      <p><strong>Правящая коалиция</strong> ${coalition.length
+        ? `${formatPercent(coalitionShare)} (${shareChange(coalitionShare, coalitionBaseline)})` : '— правительство не сформировано'}</p>`;
+  }
+
+  function electionPreview({ popularity, seats }, baseline, adjustments) {
     const replay = model.replayVotes(state, seats);
     const outcomes = [
       [1, 'passed', 'Принято в первом чтении'], [1, 'rejected', 'Отклонено в первом чтении'],
@@ -761,29 +790,7 @@
     ];
     const count = (key, reading, status) => replay.filter(bill => bill[key].reading === reading && bill[key].status === status).length;
     const reversed = (from, to) => replay.filter(bill => bill.actual.status === from && bill.projected.status === to).length;
-    return `<div class="table-wrap"><div class="election-results-chart">
-        ${ranking.map(id => {
-          const value = popularity[id];
-          const delta = Math.round((value - baseline[id]) * 10) / 10;
-          const steps = adjustments[id] ?? 0;
-          return `<div class="election-result" title="${html(parties[id].name)}">
-            <strong>${formatPercent(value)}</strong>
-            <small class="${signClass(delta)}">${signed(delta)} п. п.</small>
-            <div class="election-result-track"><span style="height:${value / peak * 100}%;background:${parties[id].color}"></span></div>
-            <span><abbr title="${html(parties[id].name)}">${html(id)}</abbr>${coalition.includes(id) ? ' <small class="no" title="Правительственная партия">(прав.)</small>' : ''}</span>
-            <div class="election-adjust">
-              ${[-1, 1].map(direction => {
-                const symbol = direction < 0 ? '−' : '+';
-                const limit = direction < 0 && steps <= -10;
-                return `<button type="button" data-adjust="${id}" data-direction="${direction}"
-                  aria-label="${html(parties[id].name)} ${symbol}10% к положительным рейтингам" ${limit ? 'disabled' : ''}>${symbol}</button>`;
-              }).join('')}
-            </div>
-          </div>`;
-        }).join('')}
-      </div></div>
-      <p><strong>Правящая коалиция</strong> ${coalition.length
-        ? `${formatPercent(coalitionShare)} <span class="${signClass(coalitionDelta)}">(${signed(coalitionDelta)} п. п.)</span>` : '— правительство не сформировано'}</p>
+    return electionResultsChart(popularity, baseline, state.government?.members ?? [], adjustments) + `
       <h3>Судьба законопроектов при новом составе</h3>
       <div class="table-wrap"><table>
         <thead><tr><th scope="col">Статус</th><th scope="col">Было</th><th scope="col">Было бы</th></tr></thead>
@@ -794,7 +801,43 @@
         ${reversed('rejected', 'passed')} отклонённых были бы приняты.</p>`;
   }
 
+  function renderPopularity(projection, prefix = '', baseline = {}) {
+    const sectorGroups = systems.map(({ name }) => ({
+      name, image: './assets/' + encodeURIComponent(name) + '.png', shares: projection.bySector[name], baseline: baseline.bySector?.[name]
+    }));
+    const classGroups = socialClasses.map(id => ({
+      name: constituencies[id], image: './assets/classes/' + id + '.png', shares: projection.byClass[id], baseline: baseline.byClass?.[id]
+    }));
+    const peak = Math.max(...[...sectorGroups, ...classGroups].flatMap(group => Object.values(group.shares)));
+    const ceiling = Math.max(10, Math.ceil(peak / 10) * 10);
+    byId(prefix + 'sector-charts').innerHTML = popularityCharts(sectorGroups, ceiling);
+    byId(prefix + 'class-charts').innerHTML = popularityCharts(classGroups, ceiling);
+  }
+
+  function renderElectionFinal(election) {
+    const baseline = election.baseline?.popularity ??
+      Object.fromEntries(partyIds.map(id => [id, election.oldSeats[id] / sum(Object.values(election.oldSeats)) * 100]));
+    screen.innerHTML = `<section class="panel election-preview">
+        <h2 tabindex="-1" id="final-election-title">Итоги выборов</h2>
+        ${electionResultsChart(election.popularity, baseline, election.coalition ?? [])}
+      </section>
+      <section class="campaign-popularity" aria-labelledby="final-sector-title">
+        <h2 id="final-sector-title">Итоги по секторам</h2>
+        <div id="final-sector-charts" class="popularity-charts"></div>
+      </section>
+      <section class="campaign-popularity" aria-labelledby="final-class-title">
+        <h2 id="final-class-title">Итоги по социальным слоям</h2>
+        <div id="final-class-charts" class="popularity-charts"></div>
+      </section>`;
+    renderPopularity(election, 'final-', election.baseline);
+  }
+
   function renderCampaign() {
+    if (!model.canCampaign(state)) {
+      if (state.lastElection) renderElectionFinal(state.lastElection);
+      else screen.innerHTML = '<p class="notice">Кампания откроется после формирования правительства и выбора решений по кризису.</p>';
+      return;
+    }
     const groups = socialClasses.map(id => `<option value="${id}">${constituencies[id]}</option>`).join('');
     const electionNotice = state.snapElection ? '<div class="notice">Назначены досрочные выборы.</div>' : '';
     screen.innerHTML = electionNotice + `<section class="campaign-popularity" aria-labelledby="sector-popularity-title">
@@ -840,8 +883,7 @@
     const preview = byId('election-preview');
     const results = byId('election-preview-results');
     const finish = byId('finish-election-form');
-    const baseline = state.lastElection?.convocation === state.convocation ? state.lastElection.popularity :
-      Object.fromEntries(partyIds.map(id => [id, state.seats[id] / total() * 100]));
+    const baseline = model.electionBaseline(state);
     const reset = byId('reset-election-adjustments');
     let adjustments = {};
     for (const row of all(form, '[data-campaign]')) {
@@ -862,18 +904,6 @@
         if (main && main === secondary.value) secondary.value = '';
       }
     }
-    function renderPopularity(projection, prefix = '') {
-      const sectorGroups = systems.map(({ name }) => ({
-        name, image: './assets/' + encodeURIComponent(name) + '.png', shares: projection.bySector[name]
-      }));
-      const classGroups = socialClasses.map(id => ({
-        name: constituencies[id], image: './assets/classes/' + id + '.png', shares: projection.byClass[id]
-      }));
-      const peak = Math.max(...[...sectorGroups, ...classGroups].flatMap(group => Object.values(group.shares)));
-      const ceiling = Math.max(10, Math.ceil(peak / 10) * 10);
-      byId(prefix + 'sector-charts').innerHTML = popularityCharts(sectorGroups, ceiling);
-      byId(prefix + 'class-charts').innerHTML = popularityCharts(classGroups, ceiling);
-    }
     form.addEventListener('change', () => {
       preview.hidden = true;
       adjustments = {};
@@ -884,8 +914,8 @@
     });
     function renderElectionPreview() {
       const projection = model.electionProjection(state, answers(), adjustments);
-      renderPopularity(projection, 'projected-');
-      results.innerHTML = electionPreview(projection, baseline, adjustments);
+      renderPopularity(projection, 'projected-', baseline);
+      results.innerHTML = electionPreview(projection, baseline.popularity, adjustments);
       reset.disabled = !Object.values(adjustments).some(Boolean);
     }
     reset.addEventListener('click', () => {
@@ -919,7 +949,7 @@
       compositionParties.clear();
       clearReadings();
       save(`Созыв № ${state.convocation} сформирован.`, true);
-      location.hash = 'statistics';
+      byId('final-election-title')?.focus();
     });
     updateCampaignOptions();
     renderPopularity(model.electionProjection(state));

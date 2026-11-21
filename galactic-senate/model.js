@@ -319,11 +319,32 @@
     return record(allocation.map(row => [row.id, row.seats]));
   }
 
+  function electionBaseline(state) {
+    if (state.lastElection?.convocation === state.convocation) {
+      const { popularity, bySector, byClass } = state.lastElection;
+      return { popularity, bySector, byClass };
+    }
+    const { bySector, byClass } = voteShares(initialState().modifiers);
+    const total = sum(Object.values(state.seats));
+    const popularity = record(partyIds.map(id => [id, state.seats[id] / total * 100]));
+    return { popularity, bySector, byClass };
+  }
+
+  function canCampaign(state) {
+    if (state.snapElection) return true;
+    if (!state.government) return false;
+    const questions = crises[state.crisisStage].questions.filter(question => question.options.length);
+    return questions.every(question => state.crisisLog.some(entry =>
+      entry.stage === state.crisisStage && entry.question === question.id));
+  }
+
   function finishElection(state, answers, adjustments) {
     const { modifiers, ...result } = electionProjection(state, answers, adjustments);
     archiveImpacts(state, [...governmentImpacts(state), ...crisisImpacts(state)]);
+    const baseline = electionBaseline(state);
+    const coalition = state.government?.members ?? [];
     state.convocation++;
-    state.lastElection = { oldSeats: state.seats, ...result, convocation: state.convocation };
+    state.lastElection = { oldSeats: state.seats, ...result, baseline, coalition, convocation: state.convocation };
     state.modifiers = modifiers;
     state.seats = result.seats;
     state.government = null;
@@ -336,6 +357,6 @@
 
   window.senateModel = {
     partyIds, axes, axisLabels, constituencies, socialClasses, laws, policies, bureaus, crises, supportScale,
-    initialState, tally, recordVote, governmentMembers, acceptGovernment, resolveCrises, dissolveGovernment, indicatorHistory, electionProjection, replayVotes, finishElection, sum
+    initialState, tally, recordVote, governmentMembers, acceptGovernment, resolveCrises, dissolveGovernment, indicatorHistory, electionProjection, electionBaseline, canCampaign, replayVotes, finishElection, sum
   };
 })();

@@ -60,7 +60,10 @@
     return election === null || (object(election) &&
       roundNumber(election.convocation) && seatMap(election.oldSeats) && seatMap(election.seats) &&
       shares(election.popularity) && dictionary(election.blame, partyIds, nonnegative, true) &&
-      dictionary(election.bySector, systemNames, shares, true) && dictionary(election.byClass, socialClasses, shares, true));
+      dictionary(election.bySector, systemNames, shares, true) && dictionary(election.byClass, socialClasses, shares, true) &&
+      (election.baseline === undefined || (object(election.baseline) && shares(election.baseline.popularity) &&
+        dictionary(election.baseline.bySector, systemNames, shares, true) && dictionary(election.baseline.byClass, socialClasses, shares, true))) &&
+      (election.coalition === undefined || (Array.isArray(election.coalition) && election.coalition.every(allowed(partyIds)))));
   }
 
   const knownStage = value => Object.hasOwn(crises, value);

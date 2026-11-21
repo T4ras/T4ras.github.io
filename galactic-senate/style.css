@@ -355,3 +355,8 @@ td select { min-width: 13rem; }
 .election-result abbr { text-decoration: none; }
 .election-adjust { display: flex; gap: .25rem; }
 .election-adjust button { min-width: 1.65rem; padding: .12rem .3rem; }
+
+.election-preview + .campaign-popularity { margin-top: 1.35rem; }
+.popularity-chart.with-change .popularity-chart-heading { margin-bottom: 2.4rem; }
+.popularity-chart-value { text-align: center; }
+.popularity-chart-value small { display: block; font-size: .62rem; }
