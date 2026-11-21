@@ -560,17 +560,13 @@
   }
 
   function renderBureaus() {
-    if (state.snapElection) {
-      screen.innerHTML = '';
-      appendCrisis();
-      return;
-    }
-    if (state.government) {
-      const { policies: enacted } = state.government;
-      screen.innerHTML = `<div class="bureau-grid">${bureaus.map((name, index) =>
+    const government = state.government ?? state.dissolvedGovernment;
+    if (government || state.snapElection) {
+      const enacted = government?.policies;
+      screen.innerHTML = enacted ? `<div class="bureau-grid">${bureaus.map((name, index) =>
         `<article class="panel bureau"><h3>${name}</h3>${enacted[index].map(policy =>
           `<div class="bureau-owner"><span class="bureau-owner-code" title="${html(parties[policy.id].name)}">${dot(policy.id)}${partyCode(policy.id)}</span>
-          <p class="owner-policy">${html(policy.name)}</p></div>`).join('')}</article>`).join('')}</div>`;
+          <p class="owner-policy">${html(policy.name)}</p></div>`).join('')}</article>`).join('')}</div>` : '';
       appendCrisis();
       return;
     }
@@ -647,7 +643,7 @@
   function protestOptions(stage) {
     const act = stage.split('-')[0];
     const options = [
-      ['yellow', 'Призыв выйти на демонстрации'],
+      ['yellow', 'Призыв выйти на демонстрации против курса федерального правительства'],
       ['red', 'Призыв к насильственным протестам против федеральных правительственных зданий'],
       ['black', 'Любые заявки, вплоть до выхода секторов из состава Республики, при наличии контроля над ними']
     ];
@@ -681,29 +677,29 @@
         </section>
         <form id="crisis-form">
       ${stage.questions.length ? `<div class="crisis-grid" tabindex="0" role="group" aria-label="Вопросы кризиса">${stage.questions.map(question => {
-        const decision = resolved.get(question.id);
+        const selected = state.snapElection ? question.options[0]?.id : resolved.get(question.id)?.option;
         return `<section class="panel crisis-question">
           <h3 id="crisis-question-${question.id}">${html(question.name)}</h3>
           ${question.options.length ? `<fieldset aria-labelledby="crisis-question-${question.id}" ${open ? '' : 'disabled'}>
             <div class="choice-grid">${question.options.map(option => `<label class="choice">
-              <input required type="radio" name="${question.id}" value="${option.id}" ${decision?.option === option.id ? 'checked' : ''}>
+              <input required type="radio" name="${question.id}" value="${option.id}" ${selected === option.id ? 'checked' : ''}>
               <b>${html(option.name)}</b>
             </label>`).join('')}</div>
           </fieldset>` : '<p class="lead">В материале пока нет вариантов ответа.</p>'}
           ${question.id === 'accession' && open ? `<label id="senate-vote-field" hidden>Голосов Сената за переговоры
             <input id="senate-votes" type="number" min="0" max="${total()}" step="1" aria-describedby="senate-threshold" disabled>
             <span id="senate-threshold">Для начала переговоров нужно ${threshold} голосов.</span></label>` : ''}
-          ${question.id === 'accession' && accession?.senateVotes !== undefined ? `<p class="lead">За переговоры ${accession.senateVotes} из ${total()}.
+          ${!state.snapElection && question.id === 'accession' && accession?.senateVotes !== undefined ? `<p class="lead">За переговоры ${accession.senateVotes} из ${total()}.
             ${accession.passed ? 'Переговоры одобрены.' : 'Порог голосов не достигнут.'}</p>` : ''}
         </section>`;
       }).join('')}</div>` : ''}
-      <div class="actions crisis-actions">
-        ${state.snapElection ? '' : '<button class="danger" type="button" id="dissolve">Правительство распущено и назначены досрочные выборы</button>'}
-        ${open ? '<button class="primary" type="submit">Зафиксировать решения</button>' : ''}
-      </div>
-    </form>
+        </form>
       <section id="crisis-indicators" class="bureau-indicators" aria-label="Показатели"></section>
       ${protestOptions(state.crisisStage)}
+      <div class="actions crisis-actions">
+        ${state.snapElection ? '' : '<button class="danger" type="button" id="dissolve">Правительство распущено и назначены досрочные выборы</button>'}
+        ${open ? '<button class="primary" type="submit" form="crisis-form">Зафиксировать решения</button>' : ''}
+      </div>
       </div></section>`);
     renderIndicators(byId('crisis-indicators'), true);
     const toggle = byId('crisis-toggle');
@@ -735,8 +731,7 @@
       if (model.resolveCrises(state, decisions, senateBallot?.valueAsNumber)) save('Решения по кризисам вступили в силу.');
     });
     byId('dissolve')?.addEventListener('click', () => {
-      model.dissolveGovernment(state);
-      save('Правительство распущено. Назначены досрочные выборы.');
+      if (model.dissolveGovernment(state)) save('Правительство распущено. Назначены досрочные выборы.');
     });
   }
 
@@ -1105,6 +1100,10 @@
 
   const views = { senate: renderComposition, reading: renderReading, bureaus: renderBureaus, campaign: renderCampaign, statistics: renderIndicators, saves: renderSaves };
   function render() {
+    if (model.startCrisis(state)) {
+      saves.commit(archive, state, false);
+      storageAvailable = persist();
+    }
     const hash = location.hash.slice(1);
     const aliases = { crisis: 'bureaus', board: 'statistics' };
     const route = Object.hasOwn(aliases, hash) ? aliases[hash] : hash;

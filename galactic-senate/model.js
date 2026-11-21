@@ -144,6 +144,20 @@
       policies: policiesInForce,
       changes: applyEffects(state, effects)
     };
+    startCrisis(state);
+    return true;
+  }
+
+  function startCrisis(state) {
+    const stage = crises[state.crisisStage];
+    if (!state.government || !stage.onset || state.crisisOnsetConvocation === state.convocation) return false;
+    state.crisisOnsetConvocation = state.convocation;
+    state.alienMultiplier = (state.alienMultiplier ?? 1) * (1 + stage.onset.alienGrowth);
+    const changes = applyEffects(state, stage.onset.effects);
+    archiveImpacts(state, [{
+      type: 'crisis', name: stage.title, source: 'Начало кризиса',
+      convocation: state.convocation, effects: appliedDeltas(changes)
+    }]);
     return true;
   }
 
@@ -231,10 +245,18 @@
   }
 
   function dissolveGovernment(state) {
-    if (state.government) state.dissolvedCoalition = [...state.government.members];
+    if (state.snapElection) return false;
+    if (state.government) {
+      const defaults = record(crises[state.crisisStage].questions.filter(question => question.options.length)
+        .map(question => [question.id, question.options[0].id]));
+      resolveCrises(state, defaults);
+      state.dissolvedGovernment = state.government;
+      state.dissolvedCoalition = [...state.government.members];
+    }
     archiveImpacts(state, governmentImpacts(state));
     state.government = null;
     state.snapElection = true;
+    return true;
   }
 
   function campaignModifiers(state, answers) {
@@ -251,7 +273,7 @@
     return { modifiers, blame };
   }
 
-  function voteShares(modifiers) {
+  function voteShares(modifiers, alienMultiplier = 1) {
     const bySector = {};
     const classTotals = record(socialClasses.map(key => [key, record(partyIds.map(id => [id, 0]))]));
     const totals = record(partyIds.map(id => [id, 0]));
@@ -260,14 +282,15 @@
       return record(entries(votes).map(([id, score]) => [id, total ? score / total * 100 : 0]));
     };
     for (const system of systems) {
-      const humanShare = system.human;
+      const alienShare = Math.min(1, (1 - system.human) * alienMultiplier);
+      const humanShare = 1 - alienShare;
       const sector = 'Sys_' + system.name.replace('-', '');
       const sectorVotes = {};
       for (const id of partyIds) {
         const base = bonuses[id];
         const bonus = key => base[key] + (modifiers[id][key] ?? 0);
         const general = bonus(sector) + bonus('Bonus_Human') * humanShare +
-          bonus('Bonus_Alien') * (1 - humanShare) + (modifiers[id].general ?? 0);
+          bonus('Bonus_Alien') * alienShare + (modifiers[id].general ?? 0);
         sectorVotes[id] = 0;
         for (const key of socialClasses) {
           const votes = Math.max(0, general + bonus(key)) * system.classes[key] * system.weight;
@@ -291,7 +314,7 @@
         if (rating > 0 && steps) modifiers[id][key] = previous + rating * (Math.max(-10, steps) / 10);
       }
     }
-    const support = voteShares(modifiers);
+    const support = voteShares(modifiers, state.alienMultiplier);
     return { ...support, blame, modifiers, seats: allocateSeats(state.seats, support.popularity) };
   }
 
@@ -359,10 +382,11 @@
     state.crisisLog = [];
     state.snapElection = false;
     delete state.dissolvedCoalition;
+    delete state.dissolvedGovernment;
   }
 
   window.senateModel = {
     partyIds, axes, axisLabels, constituencies, socialClasses, laws, policies, bureaus, crises, supportScale,
-    initialState, tally, recordVote, governmentMembers, acceptGovernment, resolveCrises, dissolveGovernment, electionCoalition, indicatorHistory, electionProjection, electionBaseline, canCampaign, replayVotes, finishElection, sum
+    initialState, tally, recordVote, governmentMembers, acceptGovernment, startCrisis, resolveCrises, dissolveGovernment, electionCoalition, indicatorHistory, electionProjection, electionBaseline, canCampaign, replayVotes, finishElection, sum
   };
 })();

@@ -1,6 +1,7 @@
 window.senateCrises = {
   'I': {
     title: 'I. Родия на перепутье',
+    onset: { alienGrowth: .1, effects: { Farmer: -2, Sys_Танааб: -2, Sys_Ондерон: -2 } },
     news: 'Аграрная Родия пережила переворот. Проимперские офицеры сместили избранного губернатора. Родианцы и другие экзоты бегут в Новую Республику. Аграрные поставки нарушены, и фермеры теряют рынки сбыта. Сенат созывает чрезвычайную сессию.',
     source: 'https://docs.google.com/document/d/1pXbyiNGlOrrs5lwlRtDNRjc3m43upznt0F0b5LsVzrU/edit',
     video: 'https://drive.google.com/file/d/1E6IP2WLbINXdc5Cm1snPdkf-FyeYGFER/view',
@@ -26,9 +27,9 @@ window.senateCrises = {
     source: 'https://docs.google.com/document/d/1uKcu0bD3nVYldf3D8uhCzsEbWgMvnNp3YyRlBtN_828/edit',
     questions: [
       { id: 'accession', name: 'Начать переговоры о вхождении Родии в состав Республики?', options: [
+        { id: 'decline', name: 'Не начинать переговоры', effects: {} },
         { id: 'negotiate', name: 'Начать переговоры при поддержке двух третей Сената', senateVote: true,
-          effects: { image: 1, Bonus_Alien: 1 } },
-        { id: 'decline', name: 'Не начинать переговоры', effects: {} }
+          effects: { image: 1, Bonus_Alien: 1 } }
       ] },
       { id: 'commonwealth', name: 'Что делать с Содружеством Нейтральных Миров?', options: [
         { id: 'wait', name: 'Ничего не делать', effects: {} },
@@ -47,8 +48,8 @@ window.senateCrises = {
         { id: 'send', name: 'Отправить флот', effects: { budget: -1 } }
       ] },
       { id: 'banks', name: 'Спасать банковскую систему?', options: [
-        { id: 'bailout', name: 'Спасать банковскую систему', effects: { budget: -1, Rich: 1 } },
-        { id: 'wait', name: 'Не спасать банки', effects: { Rich: -1, Middle: -1 } }
+        { id: 'wait', name: 'Не спасать банки', effects: { Rich: -1, Middle: -1 } },
+        { id: 'bailout', name: 'Спасать банковскую систему', effects: { budget: -1, Rich: 1 } }
       ] },
       { id: 'jobs', name: 'Что делать с ростом безработицы?', options: [] }
     ]

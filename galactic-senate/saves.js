@@ -96,6 +96,9 @@
       dictionary(state.indicators, axisIds, integer, true) && dictionary(state.modifiers, partyIds, scores, true) &&
       dictionary(state.bills, lawIds, allowed(statuses)) && Array.isArray(state.votes) && state.votes.every(voteValid) &&
       governmentValid(state.government) &&
+      (state.dissolvedGovernment === undefined || governmentValid(state.dissolvedGovernment)) &&
+      (state.alienMultiplier === undefined || (Number.isFinite(state.alienMultiplier) && state.alienMultiplier >= 1)) &&
+      (state.crisisOnsetConvocation === undefined || (roundNumber(state.crisisOnsetConvocation) && state.crisisOnsetConvocation <= state.convocation)) &&
       (state.dissolvedCoalition === undefined || (Array.isArray(state.dissolvedCoalition) && state.dissolvedCoalition.every(allowed(partyIds)))) &&
       typeof state.snapElection === 'boolean' && electionValid(state.lastElection) &&
       knownStage(state.crisisStage) && (state.nextCrisisStage === null || knownStage(state.nextCrisisStage)) &&
