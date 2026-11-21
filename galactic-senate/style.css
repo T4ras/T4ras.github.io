@@ -178,23 +178,24 @@ td select { min-width: 13rem; }
 
 .campaign-table th, .campaign-table td { padding-inline: .48rem; }
 .campaign-table td select { min-width: 10rem; font-size: .9rem; }
-.sector-popularity { margin-top: 1.35rem; }
-.sector-popularity h2 { margin-bottom: .8rem; }
-.sector-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); gap: 1rem; }
-.sector-chart-heading { display: flex; gap: .85rem; align-items: center; margin-bottom: 1.6rem; }
-.sector-planet { flex: none; border-radius: 50%; object-fit: cover; border: 1px solid #8abff88c; box-shadow: 0 0 1rem #8abff840; }
-.sector-chart { overflow-x: auto; }
-.sector-chart-plot {
+.campaign-popularity + .campaign-popularity,
+.campaign-popularity + #campaign-form { margin-top: 1.35rem; }
+.campaign-popularity h2 { margin-bottom: .8rem; }
+.popularity-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); gap: 1rem; }
+.popularity-chart-heading { display: flex; gap: .85rem; align-items: center; margin-bottom: 1.6rem; }
+.popularity-image { flex: none; border-radius: 50%; object-fit: cover; border: 1px solid #8abff88c; box-shadow: 0 0 1rem #8abff840; }
+.popularity-chart { overflow-x: auto; }
+.popularity-chart-plot {
   display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
   gap: .3rem; min-width: 24rem; height: 8.5rem; margin-bottom: 1.45rem;
   border-bottom: 1px solid var(--stroke);
   background: repeating-linear-gradient(to top, #8abff82b 0 1px, transparent 1px var(--grid-step));
 }
-.sector-chart-column { position: relative; display: flex; align-items: end; justify-content: center; }
-.sector-chart-bar { position: relative; width: 80%; height: var(--bar-height); background: var(--party-color); border-radius: 3px 3px 0 0; }
-.sector-chart-value, .sector-chart-party { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
-.sector-chart-value { bottom: 100%; padding-bottom: .15rem; font-size: .7rem; font-variant-numeric: tabular-nums; }
-.sector-chart-party { top: calc(100% + .25rem); color: var(--muted); font-size: .72rem; text-decoration: none; }
+.popularity-chart-column { position: relative; display: flex; align-items: end; justify-content: center; }
+.popularity-chart-bar { position: relative; width: 80%; height: var(--bar-height); background: var(--party-color); border-radius: 3px 3px 0 0; }
+.popularity-chart-value, .popularity-chart-party { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+.popularity-chart-value { bottom: 100%; padding-bottom: .15rem; font-size: .7rem; font-variant-numeric: tabular-nums; }
+.popularity-chart-party { top: calc(100% + .25rem); color: var(--muted); font-size: .72rem; text-decoration: none; }
 .law-search { display: grid; grid-template-columns: minmax(12rem, 1fr) minmax(0, 2fr); align-items: start; gap: 1rem; margin-bottom: 1rem; }
 .law-completion { position: relative; }
 .law-suggestions { position: absolute; z-index: 2; inset: 100% 0 auto; max-height: min(19rem, 50vh); overflow-y: auto; margin: .25rem 0 0; padding: .25rem; list-style: none; border: 1px solid #415572; border-radius: 6px; background: #111d30; box-shadow: 0 8px 24px #0008; }

@@ -721,24 +721,21 @@
     });
   }
 
-  function sectorCharts(bySector) {
-    const peak = Math.max(...Object.values(bySector).flatMap(Object.values));
-    const ceiling = Math.max(10, Math.ceil(peak / 10) * 10);
-    return systems.map(({ name }) => {
-      const shares = bySector[name];
+  function popularityCharts(groups, ceiling) {
+    return groups.map(({ name, image, shares }) => {
       const ranked = [...partyIds].sort((a, b) => shares[b] - shares[a]);
-      return `<article class="panel sector-chart">
-        <header class="sector-chart-heading">
-          <img class="sector-planet" src="./assets/${encodeURIComponent(name)}.png" width="64" height="64" alt="">
+      return `<article class="panel popularity-chart">
+        <header class="popularity-chart-heading">
+          <img class="popularity-image" src="${image}" width="64" height="64" alt="">
           <h3>${html(name)}</h3>
         </header>
-        <div class="sector-chart-plot" style="--grid-step:${1000 / ceiling}%">
+        <div class="popularity-chart-plot" style="--grid-step:${1000 / ceiling}%">
           ${ranked.map(id => {
             const share = formatPercent(shares[id]);
-            return `<div class="sector-chart-column" style="--bar-height:${shares[id] / ceiling * 100}%;--party-color:${parties[id].color}"
+            return `<div class="popularity-chart-column" style="--bar-height:${shares[id] / ceiling * 100}%;--party-color:${parties[id].color}"
               title="${html(parties[id].name)} — ${share}">
-              <span class="sector-chart-bar"><span class="sector-chart-value">${share}</span></span>
-              <abbr class="sector-chart-party" title="${html(parties[id].name)}">${html(id)}</abbr>
+              <span class="popularity-chart-bar"><span class="popularity-chart-value">${share}</span></span>
+              <abbr class="popularity-chart-party" title="${html(parties[id].name)}">${html(id)}</abbr>
             </div>`;
           }).join('')}
         </div>
@@ -749,7 +746,15 @@
   function renderCampaign() {
     const groups = socialClasses.map(id => `<option value="${id}">${constituencies[id]}</option>`).join('');
     const electionNotice = state.snapElection ? '<div class="notice">Назначены досрочные выборы.</div>' : '';
-    screen.innerHTML = electionNotice + `<form id="campaign-form" class="panel">
+    screen.innerHTML = electionNotice + `<section class="campaign-popularity" aria-labelledby="sector-popularity-title">
+        <h2 id="sector-popularity-title">Популярность партий по секторам</h2>
+        <div id="sector-charts" class="popularity-charts"></div>
+      </section>
+      <section class="campaign-popularity" aria-labelledby="class-popularity-title">
+        <h2 id="class-popularity-title">Популярность партий по социальным слоям</h2>
+        <div id="class-charts" class="popularity-charts"></div>
+      </section>
+      <form id="campaign-form" class="panel">
         <div class="table-wrap"><table class="campaign-table">
           <thead><tr><th scope="col">Партия</th><th scope="col">Кого винит</th><th scope="col">Основная группа</th>
             <th scope="col">Побочная группа</th></tr></thead>
@@ -762,11 +767,7 @@
         <p class="muted">Основная группа даёт +2 к рейтингу в группе, побочная +1. Каждое обвинение даёт цели −0,5 к рейтингу по всем группам. Популярность в секторах пересчитывается по мере ввода.</p>
         <label class="confirm"><input type="checkbox" required> Завершить текущий созыв и сформировать новый по итогам выборов</label>
         <div class="actions"><button class="primary">Зафиксировать итоги выборов</button></div>
-      </form>
-      <section class="sector-popularity" aria-labelledby="sector-popularity-title">
-        <h2 id="sector-popularity-title">Популярность партий по секторам</h2>
-        <div id="sector-charts" class="sector-charts"></div>
-      </section>`;
+      </form>`;
     const form = byId('campaign-form');
     for (const row of all(form, '[data-campaign]')) {
       for (const select of all(row, 'select')) {
@@ -786,7 +787,16 @@
         if (main && main === secondary.value) secondary.value = '';
       }
       const projection = model.electionProjection(state, answers());
-      byId('sector-charts').innerHTML = sectorCharts(projection.bySector);
+      const sectorGroups = systems.map(({ name }) => ({
+        name, image: './assets/' + encodeURIComponent(name) + '.png', shares: projection.bySector[name]
+      }));
+      const classGroups = socialClasses.map(id => ({
+        name: constituencies[id], image: './assets/classes/' + id + '.png', shares: projection.byClass[id]
+      }));
+      const peak = Math.max(...[...sectorGroups, ...classGroups].flatMap(group => Object.values(group.shares)));
+      const ceiling = Math.max(10, Math.ceil(peak / 10) * 10);
+      byId('sector-charts').innerHTML = popularityCharts(sectorGroups, ceiling);
+      byId('class-charts').innerHTML = popularityCharts(classGroups, ceiling);
     }
     form.addEventListener('change', () => {
       updateProjection();
