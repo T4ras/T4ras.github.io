@@ -113,9 +113,9 @@
   function indicatorRating(value) {
     if (value < -4) return ['Плачевно', 'dire'];
     if (value <= -2) return ['Печально', 'poor'];
-    if (value < 0) return ['Терпимо', 'fair'];
-    if (value < 2) return ['Неплохо', 'good'];
-    if (value < 4) return ['Отлично', 'great'];
+    if (value <= 0) return ['Терпимо', 'fair'];
+    if (value <= 2) return ['Неплохо', 'good'];
+    if (value <= 4) return ['Отлично', 'great'];
     return ['Великолепно', 'excellent'];
   }
   const signClass = value => value > 0 ? 'yes' : value < 0 ? 'no' : '';
