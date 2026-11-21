@@ -26,9 +26,15 @@
   const supportScale = { main: 2, secondary: 1, blame: -.5 };
   const bandwagon = 1.2;
 
+  const startingIndicators = {
+    budget: -1, welfare: 1, crime: -3, army: -4, autonomy: 0, authority: 1, image: 3,
+    Sys_Корусант: 3, Sys_Кореллия: 3, Sys_Неймодия: 3, Sys_Чандрила: 3, Sys_Танааб: 0, Sys_Ондерон: 0,
+    Rich: 3, Worker: 1, Middle: 3, Farmer: 1, Relig: 1, Self: 0, Bonus_Human: 1, Bonus_Alien: 1
+  };
+
   function initialState() {
     return {
-      convocation, seats: { ...seats }, indicators: record(Object.keys(axisLabels).map(key => [key, 0])),
+      convocation, seats: { ...seats }, indicators: record(Object.keys(axisLabels).map(key => [key, startingIndicators[key] ?? 0])),
       modifiers: record(partyIds.map(id => [id, {}])), bills: {}, votes: [],
       government: null, crisisStage: 'I', nextCrisisStage: null, crisisLog: [],
       snapElection: false, lastElection: null

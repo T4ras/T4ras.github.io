@@ -110,13 +110,33 @@
   const dot = id => `<span class="party-dot" style="--party:${parties[id].color}" aria-hidden="true"></span>`;
   const party = id => dot(id) + html(parties[id].name);
   const options = ids => ids.map(id => `<option value="${id}">${html(parties[id].name)}</option>`).join('');
-  function indicatorRating(value) {
-    if (value < -4) return ['Плачевно', 'dire'];
-    if (value <= -2) return ['Печально', 'poor'];
-    if (value <= 0) return ['Терпимо', 'fair'];
-    if (value <= 2) return ['Неплохо', 'good'];
-    if (value <= 4) return ['Отлично', 'great'];
-    return ['Великолепно', 'excellent'];
+  const ratingColors = ['dire', 'poor', 'fair', 'good', 'great', 'excellent'];
+  const indicatorScales = {
+    army: ['Отсутствует', 'Разоружённая', 'Несущественная', 'Нормальная', 'Значительная', 'Гигантская'],
+    autonomy: ['Жёсткая централизация', 'Сильная централизация', 'Умеренная централизация',
+      'Умеренная автономия', 'Широкая автономия', 'Децентрализация'],
+    authority: ['Отторжение Республики', 'Недоверие к центру', 'Сомнения в центре',
+      'Доверие к Республике', 'Поддержка общего курса', 'Республиканская солидарность'],
+    image: ['Милитаризм', 'Воинственность', 'Настороженность',
+      'Миролюбие', 'Мир и равноправие', 'Оплот мира и равноправия']
+  };
+  const generalScale = ['Плачевно', 'Печально', 'Терпимо', 'Неплохо', 'Отлично', 'Великолепно'];
+  const budgetLevels = ['Незначительный', '', 'Огромный'];
+
+  function indicatorRating(id, value) {
+    if (id === 'budget') {
+      if (value === 0) return ['Баланс', ''];
+      const magnitude = Math.abs(value);
+      const level = magnitude <= 2 ? 0 : magnitude <= 4 ? 1 : 2;
+      const kind = value < 0 ? 'дефицит' : 'профицит';
+      const label = budgetLevels[level] ? budgetLevels[level] + ' ' + kind : kind[0].toUpperCase() + kind.slice(1);
+      return [label, ratingColors[value < 0 ? 2 - level : 3 + level]];
+    }
+    if (id === 'autonomy' && value === 0) return ['Баланс полномочий', ''];
+    if (id === 'authority' && value === 0) return ['Нейтральное отношение', ''];
+    if (id === 'image' && value === 0) return ['Нейтралитет', ''];
+    const tier = [-4, -1, 1, 3, 5].filter(threshold => value >= threshold).length;
+    return [(indicatorScales[id] ?? generalScale)[tier], ratingColors[tier]];
   }
   const signClass = value => value > 0 ? 'yes' : value < 0 ? 'no' : '';
   const total = () => sum(Object.values(state.seats));
@@ -1035,7 +1055,7 @@
         <dl class="axis-list">${entries(indicators).map(([id, label]) => {
           const value = state.indicators[id];
           const [labelText, color] = editing || historyVisible
-            ? [signed(value), signClass(value)] : indicatorRating(value);
+            ? [signed(value), signClass(value)] : indicatorRating(id, value);
           const controls = (step, text, name) => editing ? `<button type="button" class="axis-step"
             data-indicator-step="${step}" aria-label="${name} «${html(label)}»">${text}</button>` : '';
           return `<div data-axis="${id}"><dt>${html(label)}</dt><dd>
