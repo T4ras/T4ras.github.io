@@ -391,3 +391,7 @@ td select { min-width: 13rem; }
   .crisis-body .axis-list > div { padding-block: .1rem; }
   .crisis-body .crisis-news .lead { margin-bottom: 0; }
 }
+
+.crisis-news-row { flex-wrap: wrap; }
+.crisis-branch-picker { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; min-width: 0; }
+.crisis-branch-picker select { max-width: 100%; }

@@ -657,6 +657,7 @@
 
   function appendCrisis() {
     const stage = crises[state.crisisStage];
+    const branches = model.crisisBranches(state);
     const resolved = new Map(state.crisisLog.filter(item => item.stage === state.crisisStage).map(item => [item.question, item]));
     const open = !state.snapElection && !resolved.size && stage.questions.some(question => question.options.length);
     const threshold = Math.ceil(total() * 2 / 3);
@@ -669,6 +670,9 @@
       <div class="crisis-news-row">
         ${stage.video ? `<a href="${stage.video}" target="_blank" rel="noopener">Новости</a>` : '<span>Новости</span>'}
         <button type="button" id="crisis-toggle" class="crisis-toggle" aria-controls="crisis-body"></button>
+        ${branches.length ? `<label class="crisis-branch-picker">Кризис акта
+          <select id="crisis-branch">${branches.map(key => `<option value="${key}" ${key === state.crisisStage ? 'selected' : ''}>
+            ${html(crises[key].title)}</option>`).join('')}</select></label>` : ''}
       </div>
       <div id="crisis-body" class="crisis-body">
         <section class="panel crisis-news">
@@ -702,6 +706,11 @@
       </div>
       </div></section>`);
     renderIndicators(byId('crisis-indicators'), true);
+    byId('crisis-branch')?.addEventListener('change', event => {
+      if (!model.chooseCrisis(state, event.target.value)) return;
+      save('Кризис выбран.');
+      byId('crisis-branch')?.focus({ preventScroll: true });
+    });
     const toggle = byId('crisis-toggle');
     const body = byId('crisis-body');
     function updateCrisisVisibility() {

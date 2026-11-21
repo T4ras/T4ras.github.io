@@ -176,6 +176,21 @@
     }
   }
 
+  function crisisBranches(state) {
+    const act = state.crisisStage.split('-')[0];
+    if (!state.government || state.snapElection || act === 'I' ||
+        state.crisisLog.some(entry => entry.stage === state.crisisStage)) return [];
+    return Object.keys(crises).filter(key => key.startsWith(act + '-'));
+  }
+
+  function chooseCrisis(state, branch) {
+    if (branch === state.crisisStage || !crisisBranches(state).includes(branch)) return false;
+    state.crisisStage = branch;
+    state.nextCrisisStage = null;
+    startCrisis(state);
+    return true;
+  }
+
   function resolveCrises(state, decisions, senateVotes) {
     const stage = state.crisisStage;
     const recorded = state.crisisLog.some(item => item.stage === stage);
@@ -387,6 +402,6 @@
 
   window.senateModel = {
     partyIds, axes, axisLabels, constituencies, socialClasses, laws, policies, bureaus, crises, supportScale,
-    initialState, tally, recordVote, governmentMembers, acceptGovernment, startCrisis, resolveCrises, dissolveGovernment, electionCoalition, indicatorHistory, electionProjection, electionBaseline, canCampaign, replayVotes, finishElection, sum
+    initialState, tally, recordVote, governmentMembers, acceptGovernment, startCrisis, crisisBranches, chooseCrisis, resolveCrises, dissolveGovernment, electionCoalition, indicatorHistory, electionProjection, electionBaseline, canCampaign, replayVotes, finishElection, sum
   };
 })();
