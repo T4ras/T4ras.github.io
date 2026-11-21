@@ -172,21 +172,42 @@
     return true;
   }
 
-  function startCrisis(state) {
+  function startCrisis(state, opened = false) {
     const stage = crises[state.crisisStage];
-    if (!state.government || !stage.onset || state.crisisOnsetConvocation === state.convocation) return false;
+    if (!state.government || !stage.onset || state.crisisOnsetConvocation === state.convocation ||
+        (state.crisisStage !== 'I' && !opened)) return false;
     state.crisisOnsetConvocation = state.convocation;
-    const growth = 1 + stage.onset.alienGrowth;
-    if (state.alienShares) {
-      for (const system of systems) state.alienShares[system.name] = Math.min(1, alienShareIn(system, state) * growth);
-    }
-    state.alienMultiplier = (state.alienMultiplier ?? 1) * growth;
+    if (state.crisisStage === 'I') state.deferredRefugeeGrowth = true;
     const changes = applyEffects(state, stage.onset.effects);
     archiveImpacts(state, [{
       type: 'crisis', name: stage.title, source: 'Начало кризиса',
       convocation: state.convocation, effects: appliedDeltas(changes)
     }]);
     return true;
+  }
+
+  function applyRefugeeDecision(state, option) {
+    const legacyGrowth = state.crisisOnsetConvocation === state.convocation && !state.deferredRefugeeGrowth;
+    if (legacyGrowth) {
+      // Earlier saves applied the influx before the government chose a migration policy.
+      if (option.alienGrowth) return;
+      const multiplier = state.alienMultiplier ?? 1;
+      const previous = multiplier / 1.1;
+      if (state.alienShares) {
+        for (const system of systems) {
+          const base = 1 - system.human;
+          state.alienShares[system.name] *= Math.min(1, base * previous) / Math.min(1, base * multiplier);
+        }
+      }
+      state.alienMultiplier = Math.max(1, previous);
+      return;
+    }
+    if (!option.alienGrowth) return;
+    const growth = 1 + option.alienGrowth;
+    if (state.alienShares) {
+      for (const system of systems) state.alienShares[system.name] = Math.min(1, alienShareIn(system, state) * growth);
+    }
+    state.alienMultiplier = (state.alienMultiplier ?? 1) * growth;
   }
 
   function nextStage(stage, decisions, army) {
@@ -206,7 +227,7 @@
 
   function crisisBranches(state) {
     const act = state.crisisStage.split('-')[0];
-    if (!state.government || state.snapElection || act === 'I' ||
+    if (!state.government || state.snapElection || act === 'I' || state.crisisOnsetConvocation === state.convocation ||
         state.crisisLog.some(entry => entry.stage === state.crisisStage)) return [];
     return Object.keys(crises).filter(key => key.startsWith(act + '-'));
   }
@@ -230,6 +251,7 @@
     const total = sum(Object.values(state.seats));
     const requiresVote = selected.some(option => option.senateVote);
     if (requiresVote && (!Number.isInteger(senateVotes) || senateVotes < 0 || senateVotes > total)) return false;
+    startCrisis(state, true);
     const army = state.indicators.army;
     state.nextCrisisStage = nextStage(stage, { ...decisions, ...recorded }, army);
 
@@ -237,6 +259,7 @@
       const option = selected[index];
       const passed = !option.senateVote || 3 * senateVotes >= 2 * total;
       const effects = passed ? { ...option.effects } : {};
+      if (stage === 'I' && question.id === 'refugees') applyRefugeeDecision(state, option);
       if (stage === 'I' && question.id === 'fleet' && option.id === 'send') {
         state.rodiaLiberators = [...(state.government?.members ?? [])];
         effects.image = army >= 2 ? 1 : -1;
@@ -428,7 +451,7 @@
 
   function canCampaign(state) {
     if (state.snapElection) return true;
-    if (!state.government) return false;
+    if (!state.government || state.crisisOnsetConvocation !== state.convocation) return false;
     const questions = crises[state.crisisStage].questions.filter(question => question.options.length);
     return questions.every(question => state.crisisLog.some(entry =>
       entry.stage === state.crisisStage && entry.question === question.id));
@@ -447,6 +470,7 @@
     state.bills = {};
     state.crisisStage = state.nextCrisisStage ?? nextStage(state.crisisStage, {}, state.indicators.army);
     state.nextCrisisStage = null;
+    delete state.deferredRefugeeGrowth;
     state.crisisLog = [];
     state.snapElection = false;
     delete state.dissolvedCoalition;

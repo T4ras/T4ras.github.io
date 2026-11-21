@@ -745,6 +745,12 @@
     updateCrisisVisibility();
     toggle.addEventListener('click', () => {
       crisisExpanded = !crisisExpanded;
+      if (crisisExpanded && model.startCrisis(state, true)) {
+        save('Кризис начался. Показатели обновлены.');
+        byId('crisis-title').focus({ preventScroll: true });
+        byId('crisis-body').scrollIntoView({ block: 'start' });
+        return;
+      }
       updateCrisisVisibility();
       if (crisisExpanded) {
         byId('crisis-title').focus({ preventScroll: true });

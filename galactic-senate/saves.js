@@ -104,6 +104,7 @@
         share => Number.isFinite(share) && share >= 0 && share <= 1) &&
         systemNames.every(system => Object.hasOwn(state.alienShares, system)))) &&
       (state.alienMultiplier === undefined || (Number.isFinite(state.alienMultiplier) && state.alienMultiplier >= 1)) &&
+      (state.deferredRefugeeGrowth === undefined || typeof state.deferredRefugeeGrowth === 'boolean') &&
       (state.crisisOnsetConvocation === undefined || (roundNumber(state.crisisOnsetConvocation) && state.crisisOnsetConvocation <= state.convocation)) &&
       (state.rodiaLiberators === undefined || (Array.isArray(state.rodiaLiberators) &&
         new Set(state.rodiaLiberators).size === state.rodiaLiberators.length && state.rodiaLiberators.every(allowed(partyIds)))) &&
