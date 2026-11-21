@@ -375,6 +375,7 @@
       const humanShare = 1 - alienShare;
       const sector = 'Sys_' + system.name.replace('-', '');
       const sectorVotes = {};
+      const scoresByClass = record(socialClasses.map(key => [key, {}]));
       for (const id of partyIds) {
         const base = bonuses[id];
         const bonus = key => (base[key] ?? 0) + (modifiers[id][key] ?? 0);
@@ -382,13 +383,21 @@
           bonus('Bonus_Alien') * alienShare + (modifiers[id].general ?? 0);
         sectorVotes[id] = 0;
         for (const key of socialClasses) {
-          const votes = Math.max(0, general + bonus(key)) * system.classes[key] * system.weight;
-          sectorVotes[id] += votes;
-          classTotals[key][id] += votes;
+          const score = Math.max(0, general + bonus(key));
+          scoresByClass[key][id] = score;
+          sectorVotes[id] += score * system.classes[key];
         }
-        totals[id] += sectorVotes[id];
       }
-      bySector[system.name] = normalize(sectorVotes);
+      for (const key of socialClasses) {
+        const shares = normalize(scoresByClass[key]);
+        const populationWeight = system.classes[key] * system.weight;
+        for (const id of partyIds) classTotals[key][id] += shares[id] / 100 * populationWeight;
+      }
+      const sectorShares = normalize(sectorVotes);
+      bySector[system.name] = sectorShares;
+
+      // A sector contributes its fixed population weight, regardless of the raw score total.
+      for (const id of partyIds) totals[id] += sectorShares[id] / 100 * system.weight;
     }
     return { popularity: normalize(totals), bySector, byClass: record(entries(classTotals).map(([key, scores]) => [key, normalize(scores)])) };
   }
