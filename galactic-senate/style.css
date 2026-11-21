@@ -362,3 +362,10 @@ td select { min-width: 13rem; }
 .popularity-chart-value small { display: block; font-size: .62rem; }
 
 .bureau-indicators { margin-top: 1.35rem; }
+
+.protest-options { margin-top: 1rem; }
+.protest-options ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: .65rem; padding: 0; margin: .75rem 0 0; list-style: none; }
+.protest-option { padding: .75rem; border: 1px solid; border-radius: 5px; }
+.protest-option--yellow { background: #f4cf70; color: #201807; border-color: #f4cf70; }
+.protest-option--red { background: #791f2c; color: #fff0f0; border-color: #d45763; }
+.protest-option--black { background: #030303; color: #f1f3f6; border-color: #606a7b; }

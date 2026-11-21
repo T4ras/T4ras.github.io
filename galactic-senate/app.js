@@ -563,7 +563,6 @@
     if (state.snapElection) {
       screen.innerHTML = '';
       appendCrisis();
-      appendBureauIndicators();
       return;
     }
     if (state.government) {
@@ -573,7 +572,6 @@
           `<div class="bureau-owner"><span class="bureau-owner-code" title="${html(parties[policy.id].name)}">${dot(policy.id)}${partyCode(policy.id)}</span>
           <p class="owner-policy">${html(policy.name)}</p></div>`).join('')}</article>`).join('')}</div>`;
       appendCrisis();
-      appendBureauIndicators();
       return;
     }
     screen.innerHTML = `<form id="coalition">
@@ -644,7 +642,21 @@
       }
     });
     updateOwners();
-    appendBureauIndicators();
+  }
+
+  function protestOptions(stage) {
+    const act = stage.split('-')[0];
+    const options = [
+      ['yellow', 'Призыв выйти на демонстрации'],
+      ['red', 'Призыв к насильственным протестам против федеральных правительственных зданий'],
+      ['black', 'Любые заявки, вплоть до выхода секторов из состава Республики, при наличии контроля над ними']
+    ];
+    const count = { I: 1, II: 2, III: 3 }[act];
+    return `<section class="protest-options panel" aria-labelledby="protest-options-title">
+      <h3 id="protest-options-title">Варианты протеста</h3>
+      <ul>${options.slice(0, count).map(([color, text]) =>
+        `<li class="protest-option protest-option--${color}">${text}</li>`).join('')}</ul>
+    </section>`;
   }
 
   function appendCrisis() {
@@ -689,7 +701,11 @@
         ${state.snapElection ? '' : '<button class="danger" type="button" id="dissolve">Правительство распущено и назначены досрочные выборы</button>'}
         ${open ? '<button class="primary" type="submit">Зафиксировать решения</button>' : ''}
       </div>
-    </form></div></section>`);
+    </form>
+      <section id="crisis-indicators" class="bureau-indicators" aria-label="Показатели"></section>
+      ${protestOptions(state.crisisStage)}
+      </div></section>`);
+    renderIndicators(byId('crisis-indicators'), true);
     const toggle = byId('crisis-toggle');
     const body = byId('crisis-body');
     function updateCrisisVisibility() {
@@ -958,20 +974,14 @@
     renderPopularity(model.electionProjection(state));
   }
 
-  function appendBureauIndicators() {
-    const board = document.createElement('section');
-    board.className = 'bureau-indicators';
-    board.setAttribute('aria-label', 'Указатели');
-    screen.append(board);
-    renderIndicators(board);
-  }
-
-  function renderIndicators(root = screen) {
+  function renderIndicators(root = screen, readOnly = false) {
+    const editing = !readOnly && indicatorsUnlocked;
+    const historyVisible = !readOnly && showIndicatorHistory;
     const titles = { republic: 'Республика', sector: 'Секторы', audience: 'Группы населения' };
-    const history = showIndicatorHistory ? model.indicatorHistory(state) : [];
+    const history = historyVisible ? model.indicatorHistory(state) : [];
     const types = { bill: 'Законопроект', policy: 'Политика Бюро', crisis: 'Кризис' };
     function historyFor(id) {
-      if (!showIndicatorHistory) return '';
+      if (!historyVisible) return '';
       const rows = history.filter(entry => entry.effects[id]).map(entry =>
         '<li><span>' + html(entry.name) + '<small>' + types[entry.type] + ' · ' +
         html(entry.source) + ' · созыв ' + entry.convocation + '</small></span><strong class="' +
@@ -979,19 +989,20 @@
       return '<dd class="axis-history">' + (rows ? '<ul>' + rows + '</ul>' :
         '<span class="muted">Нет записей</span>') + '</dd>';
     }
-    root.innerHTML = `<div class="board-toolbar">
+    const toolbar = readOnly ? '' : `<div class="board-toolbar">
       <button type="button" id="indicator-eye" class="quiet indicator-lock" aria-label="История изменений" aria-pressed="${showIndicatorHistory}" title="История изменений"><span aria-hidden="true">👁</span></button>
       <button type="button" id="indicator-lock" class="quiet indicator-lock" aria-label="Редактирование показателей"
         aria-pressed="${indicatorsUnlocked}" title="${indicatorsUnlocked ? 'Зафиксировать показатели' : 'Изменить показатели'}">
         <span aria-hidden="true">${indicatorsUnlocked ? '🔓' : '🔒'}</span>
       </button>
-    </div><div class="board-grid" aria-label="Показатели Республики">${entries(axes).map(([group, indicators]) =>
+    </div>`;
+    root.innerHTML = `${toolbar}<div class="board-grid" aria-label="Показатели Республики">${entries(axes).map(([group, indicators]) =>
       `<section class="panel"><h3>${titles[group]}</h3>
         <dl class="axis-list">${entries(indicators).map(([id, label]) => {
           const value = state.indicators[id];
-          const [labelText, color] = indicatorsUnlocked || showIndicatorHistory
+          const [labelText, color] = editing || historyVisible
             ? [signed(value), signClass(value)] : indicatorRating(value);
-          const controls = (step, text, name) => indicatorsUnlocked ? `<button type="button" class="axis-step"
+          const controls = (step, text, name) => editing ? `<button type="button" class="axis-step"
             data-indicator-step="${step}" aria-label="${name} «${html(label)}»">${text}</button>` : '';
           return `<div data-axis="${id}"><dt>${html(label)}</dt><dd>
             ${controls(-1, '−', 'Уменьшить')}
@@ -1000,6 +1011,8 @@
           </dd>${historyFor(id)}</div>`;
         }).join('')}</dl>
       </section>`).join('')}</div>`;
+
+    if (readOnly) return;
 
     byId('indicator-eye').addEventListener('click', () => {
       showIndicatorHistory = !showIndicatorHistory;
