@@ -171,7 +171,43 @@
     return true;
   }
 
+  const appliedDeltas = changes => record(entries(changes).map(([id, change]) => [id, change.after - change.before]));
+
+  function governmentImpacts(state) {
+    return (state.government?.policies ?? []).flatMap((bureau, index) => bureau.map(policy => ({
+      type: 'policy', name: policy.name, source: bureaus[index] + ' · ' + parties[policy.id].name,
+      convocation: state.convocation, effects: policy.effects
+    })));
+  }
+
+  function crisisImpacts(state) {
+    return state.crisisLog.map(decision => {
+      const stage = crises[decision.stage];
+      const question = stage?.questions.find(item => item.id === decision.question);
+      const option = question?.options.find(item => item.id === decision.option);
+      return {
+        type: 'crisis', name: option?.name ?? 'Решение из старого сохранения',
+        source: question ? stage.title + ' · ' + question.name : 'Кризис',
+        convocation: state.convocation, effects: appliedDeltas(decision.changes)
+      };
+    });
+  }
+
+  function archiveImpacts(state, impacts) {
+    if (impacts.length) (state.indicatorArchive ??= []).push(...impacts);
+  }
+
+  function indicatorHistory(state) {
+    const bills = state.votes.filter(vote => vote.status === 'passed').map(vote => ({
+      type: 'bill', name: vote.name, source: parties[vote.author].name,
+      convocation: vote.convocation, effects: appliedDeltas(vote.changes)
+    }));
+    return [...bills, ...(state.indicatorArchive ?? []), ...governmentImpacts(state), ...crisisImpacts(state)]
+      .sort((a, b) => b.convocation - a.convocation);
+  }
+
   function dissolveGovernment(state) {
+    archiveImpacts(state, governmentImpacts(state));
     state.government = null;
     state.snapElection = true;
   }
@@ -253,6 +289,7 @@
 
   function finishElection(state, answers) {
     const { modifiers, ...result } = electionProjection(state, answers);
+    archiveImpacts(state, [...governmentImpacts(state), ...crisisImpacts(state)]);
     state.convocation++;
     state.lastElection = { oldSeats: state.seats, ...result, convocation: state.convocation };
     state.modifiers = modifiers;
@@ -267,6 +304,6 @@
 
   window.senateModel = {
     partyIds, axes, axisLabels, constituencies, socialClasses, laws, policies, bureaus, crises, supportScale,
-    initialState, tally, recordVote, governmentMembers, acceptGovernment, resolveCrises, dissolveGovernment, electionProjection, finishElection, sum
+    initialState, tally, recordVote, governmentMembers, acceptGovernment, resolveCrises, dissolveGovernment, indicatorHistory, electionProjection, finishElection, sum
   };
 })();

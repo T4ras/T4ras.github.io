@@ -82,13 +82,19 @@
       new Set(order).size === partyIds.length && order.every(allowed(partyIds)));
   }
 
+  function indicatorArchiveValid(archive) {
+    return archive === undefined || (Array.isArray(archive) && archive.every(entry =>
+      object(entry) && ['policy', 'crisis'].includes(entry.type) && name(entry.name) && name(entry.source) &&
+      roundNumber(entry.convocation) && effects(entry.effects)));
+  }
+
   function stateValid(state) {
     return object(state) && roundNumber(state.convocation) && seatMap(state.seats) && partyOrderValid(state.partyOrder) &&
       dictionary(state.indicators, axisIds, integer, true) && dictionary(state.modifiers, partyIds, scores, true) &&
       dictionary(state.bills, lawIds, allowed(statuses)) && Array.isArray(state.votes) && state.votes.every(voteValid) &&
       governmentValid(state.government) && typeof state.snapElection === 'boolean' && electionValid(state.lastElection) &&
       knownStage(state.crisisStage) && (state.nextCrisisStage === null || knownStage(state.nextCrisisStage)) &&
-      Array.isArray(state.crisisLog) && state.crisisLog.every(crisisValid);
+      Array.isArray(state.crisisLog) && state.crisisLog.every(crisisValid) && indicatorArchiveValid(state.indicatorArchive);
   }
 
   function mergeAxes(value, valid, combine) {

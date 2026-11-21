@@ -23,6 +23,7 @@
   const compositionParties = new Set();
   let compositionUnlocked = false;
   let indicatorsUnlocked = false;
+  let showIndicatorHistory = false;
   const readingViews = {
     1: { bill: null, votes: {}, filter: '', selected: new Set() },
     2: { bill: null, votes: {}, filter: '', selected: new Set() }
@@ -71,6 +72,7 @@
     compositionParties.clear();
     compositionUnlocked = false;
     indicatorsUnlocked = false;
+    showIndicatorHistory = false;
     clearReadings();
     campaignDraft = {};
     crisisExpanded = false;
@@ -780,7 +782,19 @@
 
   function renderIndicators() {
     const titles = { republic: 'Республика', sector: 'Секторы', audience: 'Группы населения' };
+    const history = showIndicatorHistory ? model.indicatorHistory(state) : [];
+    const types = { bill: 'Законопроект', policy: 'Политика Бюро', crisis: 'Кризис' };
+    function historyFor(id) {
+      if (!showIndicatorHistory) return '';
+      const rows = history.filter(entry => entry.effects[id]).map(entry =>
+        '<li><span>' + html(entry.name) + '<small>' + types[entry.type] + ' · ' +
+        html(entry.source) + ' · созыв ' + entry.convocation + '</small></span><strong class="' +
+        signClass(entry.effects[id]) + '">' + signed(entry.effects[id]) + '</strong></li>').join('');
+      return '<dd class="axis-history">' + (rows ? '<ul>' + rows + '</ul>' :
+        '<span class="muted">Нет записей</span>') + '</dd>';
+    }
     screen.innerHTML = `<div class="board-toolbar">
+      <button type="button" id="indicator-eye" class="quiet indicator-lock" aria-label="История изменений" aria-pressed="${showIndicatorHistory}" title="История изменений"><span aria-hidden="true">👁</span></button>
       <button type="button" id="indicator-lock" class="quiet indicator-lock" aria-label="Редактирование показателей"
         aria-pressed="${indicatorsUnlocked}" title="${indicatorsUnlocked ? 'Зафиксировать показатели' : 'Изменить показатели'}">
         <span aria-hidden="true">${indicatorsUnlocked ? '🔓' : '🔒'}</span>
@@ -795,10 +809,15 @@
             ${controls(-1, '−', 'Уменьшить')}
             <output class="${signClass(value)}" aria-live="polite">${scaleLabel(value)}</output>
             ${controls(1, '+', 'Увеличить')}
-          </dd></div>`;
+          </dd>${historyFor(id)}</div>`;
         }).join('')}</dl>
       </section>`).join('')}</div>`;
 
+    byId('indicator-eye').addEventListener('click', () => {
+      showIndicatorHistory = !showIndicatorHistory;
+      renderIndicators();
+      byId('indicator-eye').focus({ preventScroll: true });
+    });
     byId('indicator-lock').addEventListener('click', () => {
       indicatorsUnlocked = !indicatorsUnlocked;
       renderIndicators();

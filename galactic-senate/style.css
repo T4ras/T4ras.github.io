@@ -312,3 +312,11 @@ td select { min-width: 13rem; }
 @media (max-width: 500px) {
   .board-grid { grid-template-columns: 1fr; }
 }
+
+.board-toolbar { gap: .45rem; }
+.axis-list > div { flex-wrap: wrap; }
+.axis-list .axis-history { flex: 0 0 100%; min-width: 0; display: block; white-space: normal; font-weight: 400; }
+.axis-history ul { padding: 0; margin: .25rem 0 0; list-style: none; }
+.axis-history li { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; padding: .35rem 0; }
+.axis-history small { display: block; color: var(--muted); overflow-wrap: anywhere; }
+.axis-history strong { white-space: nowrap; }
