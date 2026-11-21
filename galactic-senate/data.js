@@ -163,15 +163,16 @@ window.senateData = {
       "Sys_ОрдМантел": 2,
       "Bonus_Human": -3,
       "Bonus_Alien": 7,
-      "Sys_Ондерон": 0
+      "Sys_Ондерон": 0,
+      "Sys_Родия": 0
     },
     "ФГП": {
       "Rich": 2,
       "Relig": 1,
-      "Worker": 0,
+      "Worker": 1,
       "Farmer": -1,
       "Self": -2,
-      "Middle": 1,
+      "Middle": 2,
       "Sys_Корусант": -1,
       "Sys_Кореллия": 1,
       "Sys_Неймодия": -3,
@@ -180,7 +181,8 @@ window.senateData = {
       "Sys_ОрдМантел": -2,
       "Bonus_Human": 5,
       "Bonus_Alien": -7,
-      "Sys_Ондерон": 0
+      "Sys_Ондерон": 0,
+      "Sys_Родия": 0
     },
     "ДУ": {
       "Rich": 3,
@@ -188,33 +190,35 @@ window.senateData = {
       "Worker": 1,
       "Farmer": 0,
       "Self": 0,
-      "Middle": 5,
+      "Middle": 3,
       "Sys_Корусант": 2,
       "Sys_Кореллия": 0,
-      "Sys_Неймодия": 0,
+      "Sys_Неймодия": -1,
       "Sys_Чандрила": 1,
       "Sys_Танааб": -1,
       "Sys_ОрдМантел": -2,
       "Bonus_Human": 1,
-      "Bonus_Alien": 1,
-      "Sys_Ондерон": -1
+      "Bonus_Alien": 2,
+      "Sys_Ондерон": -1,
+      "Sys_Родия": 0
     },
-    "СДК": {
-      "Rich": 0,
+    "ДДГ": {
+      "Rich": 1,
       "Relig": 1,
-      "Worker": 2,
-      "Farmer": 3,
-      "Self": 1,
+      "Worker": 1,
+      "Farmer": 0,
+      "Self": 2,
       "Middle": 1,
-      "Sys_Корусант": 0,
+      "Sys_Корусант": 1,
       "Sys_Кореллия": 0,
-      "Sys_Неймодия": -1,
+      "Sys_Неймодия": 1,
       "Sys_Чандрила": 0,
-      "Sys_Танааб": 2,
-      "Sys_ОрдМантел": 0,
+      "Sys_Танааб": 1,
+      "Sys_ОрдМантел": 2,
       "Bonus_Human": 0,
       "Bonus_Alien": 0,
-      "Sys_Ондерон": 2
+      "Sys_Ондерон": 0,
+      "Sys_Родия": 0
     },
     "ВС": {
       "Rich": 1,
@@ -231,12 +235,13 @@ window.senateData = {
       "Sys_ОрдМантел": 4,
       "Bonus_Human": 0,
       "Bonus_Alien": 0,
-      "Sys_Ондерон": -1
+      "Sys_Ондерон": -1,
+      "Sys_Родия": 0
     },
     "РРБ": {
       "Rich": -2,
       "Relig": -1,
-      "Worker": 5,
+      "Worker": 7,
       "Farmer": 1,
       "Self": 0,
       "Middle": 0,
@@ -248,10 +253,10 @@ window.senateData = {
       "Sys_ОрдМантел": 0,
       "Bonus_Human": 1,
       "Bonus_Alien": 0,
-      "Sys_Ондерон": 0
+      "Sys_Ондерон": 0,
+      "Sys_Родия": 0
     },
     "ВН": {
-      "Sys_Родия": -5,
       "Rich": 1,
       "Relig": 0,
       "Worker": 0,
@@ -263,10 +268,11 @@ window.senateData = {
       "Sys_Неймодия": 5,
       "Sys_Чандрила": -2,
       "Sys_Танааб": -2,
-      "Sys_ОрдМантел": -2,
+      "Sys_ОрдМантел": -1,
       "Bonus_Human": -3,
       "Bonus_Alien": 5,
-      "Sys_Ондерон": -2
+      "Sys_Ондерон": -2,
+      "Sys_Родия": -5
     },
     "ЛАГ": {
       "Rich": 0,
@@ -283,7 +289,8 @@ window.senateData = {
       "Sys_ОрдМантел": -1,
       "Bonus_Human": 0,
       "Bonus_Alien": 0,
-      "Sys_Ондерон": 2
+      "Sys_Ондерон": 2,
+      "Sys_Родия": 0
     },
     "СГ": {
       "Rich": 2,
@@ -291,7 +298,7 @@ window.senateData = {
       "Worker": 0,
       "Farmer": 1,
       "Self": -2,
-      "Middle": 1,
+      "Middle": 0,
       "Sys_Корусант": 0,
       "Sys_Кореллия": -1,
       "Sys_Неймодия": -2,
@@ -300,24 +307,26 @@ window.senateData = {
       "Sys_ОрдМантел": -2,
       "Bonus_Human": 0,
       "Bonus_Alien": 0,
-      "Sys_Ондерон": 1
+      "Sys_Ондерон": 1,
+      "Sys_Родия": 0
     },
-    "ДДГ": {
-      "Rich": 1,
-      "Relig": 0,
-      "Worker": 1,
-      "Farmer": 0,
-      "Self": 2,
+    "СДК": {
+      "Rich": 0,
+      "Relig": 1,
+      "Worker": 2,
+      "Farmer": 3,
+      "Self": 1,
       "Middle": 1,
-      "Sys_Корусант": 1,
+      "Sys_Корусант": 0,
       "Sys_Кореллия": 0,
-      "Sys_Неймодия": 1,
+      "Sys_Неймодия": -1,
       "Sys_Чандрила": 0,
-      "Sys_Танааб": 1,
-      "Sys_ОрдМантел": 2,
+      "Sys_Танааб": 2,
+      "Sys_ОрдМантел": 0,
       "Bonus_Human": 0,
-      "Bonus_Alien": 1,
-      "Sys_Ондерон": 0
+      "Bonus_Alien": 0,
+      "Sys_Ондерон": 2,
+      "Sys_Родия": 0
     }
   }
 };
