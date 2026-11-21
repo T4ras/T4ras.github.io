@@ -276,18 +276,18 @@
     return { popularity: normalize(totals), bySector, byClass: record(entries(classTotals).map(([key, scores]) => [key, normalize(scores)])) };
   }
 
-  function electionProjection(state, answers = {}) {
+  function electionProjection(state, answers = {}, adjustments = {}) {
     const { modifiers, blame } = campaignModifiers(state, answers);
+    const keys = [...socialClasses, ...Object.keys(axes.sector)];
+    for (const [id, steps] of entries(adjustments)) {
+      for (const key of keys) {
+        const previous = modifiers[id][key] ?? 0;
+        const rating = bonuses[id][key] + previous;
+        if (rating > 0 && steps) modifiers[id][key] = previous + rating * (Math.max(-10, steps) / 10);
+      }
+    }
     const support = voteShares(modifiers);
     return { ...support, blame, modifiers, seats: allocateSeats(state.seats, support.popularity) };
-  }
-
-  function adjustPopularity(popularity, id, delta) {
-    const others = partyIds.filter(other => other !== id);
-    const otherTotal = sum(others.map(other => popularity[other]));
-    const share = Math.max(0, Math.min(100, popularity[id] + delta));
-    return record(partyIds.map(other => [other, other === id ? share : (100 - share) *
-      (otherTotal > 0 ? popularity[other] / otherTotal : 1 / others.length)]));
   }
 
   function allocateSeats(currentSeats, popularity) {
@@ -319,12 +319,8 @@
     return record(allocation.map(row => [row.id, row.seats]));
   }
 
-  function finishElection(state, answers, popularity) {
-    const { modifiers, ...result } = electionProjection(state, answers);
-    if (popularity) {
-      result.popularity = popularity;
-      result.seats = allocateSeats(state.seats, popularity);
-    }
+  function finishElection(state, answers, adjustments) {
+    const { modifiers, ...result } = electionProjection(state, answers, adjustments);
     archiveImpacts(state, [...governmentImpacts(state), ...crisisImpacts(state)]);
     state.convocation++;
     state.lastElection = { oldSeats: state.seats, ...result, convocation: state.convocation };
@@ -340,6 +336,6 @@
 
   window.senateModel = {
     partyIds, axes, axisLabels, constituencies, socialClasses, laws, policies, bureaus, crises, supportScale,
-    initialState, tally, recordVote, governmentMembers, acceptGovernment, resolveCrises, dissolveGovernment, indicatorHistory, electionProjection, allocateSeats, adjustPopularity, replayVotes, finishElection, sum
+    initialState, tally, recordVote, governmentMembers, acceptGovernment, resolveCrises, dissolveGovernment, indicatorHistory, electionProjection, replayVotes, finishElection, sum
   };
 })();
