@@ -724,6 +724,7 @@
   function popularityCharts(groups, ceiling) {
     return groups.map(({ name, image, shares }) => {
       const ranked = [...partyIds].sort((a, b) => shares[b] - shares[a]);
+      let zeroCount = 0;
       return `<article class="panel popularity-chart">
         <header class="popularity-chart-heading">
           <img class="popularity-image" src="${image}" width="64" height="64" alt="">
@@ -731,8 +732,10 @@
         </header>
         <div class="popularity-chart-plot" style="--grid-step:${1000 / ceiling}%">
           ${ranked.map(id => {
-            const share = formatPercent(shares[id]);
-            return `<div class="popularity-chart-column" style="--bar-height:${shares[id] / ceiling * 100}%;--party-color:${parties[id].color}"
+            const displayedShare = formatPercent(shares[id]) === formatPercent(0)
+              ? (zeroCount++ % 3 + 1) / 10 : shares[id];
+            const share = formatPercent(displayedShare);
+            return `<div class="popularity-chart-column" style="--bar-height:${displayedShare / ceiling * 100}%;--party-color:${parties[id].color}"
               title="${html(parties[id].name)} — ${share}">
               <span class="popularity-chart-bar"><span class="popularity-chart-value">${share}</span></span>
               <abbr class="popularity-chart-party" title="${html(parties[id].name)}">${html(id)}</abbr>
