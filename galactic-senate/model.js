@@ -226,7 +226,12 @@
       .sort((a, b) => b.convocation - a.convocation);
   }
 
+  function electionCoalition(state) {
+    return state.government?.members ?? state.dissolvedCoalition ?? [];
+  }
+
   function dissolveGovernment(state) {
+    if (state.government) state.dissolvedCoalition = [...state.government.members];
     archiveImpacts(state, governmentImpacts(state));
     state.government = null;
     state.snapElection = true;
@@ -342,7 +347,7 @@
     const { modifiers, ...result } = electionProjection(state, answers, adjustments);
     archiveImpacts(state, [...governmentImpacts(state), ...crisisImpacts(state)]);
     const baseline = electionBaseline(state);
-    const coalition = state.government?.members ?? [];
+    const coalition = electionCoalition(state);
     state.convocation++;
     state.lastElection = { oldSeats: state.seats, ...result, baseline, coalition, convocation: state.convocation };
     state.modifiers = modifiers;
@@ -353,10 +358,11 @@
     state.nextCrisisStage = null;
     state.crisisLog = [];
     state.snapElection = false;
+    delete state.dissolvedCoalition;
   }
 
   window.senateModel = {
     partyIds, axes, axisLabels, constituencies, socialClasses, laws, policies, bureaus, crises, supportScale,
-    initialState, tally, recordVote, governmentMembers, acceptGovernment, resolveCrises, dissolveGovernment, indicatorHistory, electionProjection, electionBaseline, canCampaign, replayVotes, finishElection, sum
+    initialState, tally, recordVote, governmentMembers, acceptGovernment, resolveCrises, dissolveGovernment, electionCoalition, indicatorHistory, electionProjection, electionBaseline, canCampaign, replayVotes, finishElection, sum
   };
 })();

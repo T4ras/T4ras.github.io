@@ -723,7 +723,7 @@
 
   function shareChange(value, baseline) {
     const delta = Math.round((value - baseline) * 10) / 10;
-    return `<small class="${signClass(delta)}">${signed(delta)} п. п.</small>`;
+    return `<small class="${signClass(delta)}">${signed(delta)}</small>`;
   }
 
   function popularityCharts(groups, ceiling) {
@@ -790,7 +790,7 @@
     ];
     const count = (key, reading, status) => replay.filter(bill => bill[key].reading === reading && bill[key].status === status).length;
     const reversed = (from, to) => replay.filter(bill => bill.actual.status === from && bill.projected.status === to).length;
-    return electionResultsChart(popularity, baseline, state.government?.members ?? [], adjustments) + `
+    return electionResultsChart(popularity, baseline, model.electionCoalition(state), adjustments) + `
       <h3>Судьба законопроектов при новом составе</h3>
       <div class="table-wrap"><table>
         <thead><tr><th scope="col">Статус</th><th scope="col">Было</th><th scope="col">Было бы</th></tr></thead>

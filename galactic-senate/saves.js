@@ -95,7 +95,9 @@
     return object(state) && roundNumber(state.convocation) && seatMap(state.seats) && partyOrderValid(state.partyOrder) &&
       dictionary(state.indicators, axisIds, integer, true) && dictionary(state.modifiers, partyIds, scores, true) &&
       dictionary(state.bills, lawIds, allowed(statuses)) && Array.isArray(state.votes) && state.votes.every(voteValid) &&
-      governmentValid(state.government) && typeof state.snapElection === 'boolean' && electionValid(state.lastElection) &&
+      governmentValid(state.government) &&
+      (state.dissolvedCoalition === undefined || (Array.isArray(state.dissolvedCoalition) && state.dissolvedCoalition.every(allowed(partyIds)))) &&
+      typeof state.snapElection === 'boolean' && electionValid(state.lastElection) &&
       knownStage(state.crisisStage) && (state.nextCrisisStage === null || knownStage(state.nextCrisisStage)) &&
       Array.isArray(state.crisisLog) && state.crisisLog.every(crisisValid) && indicatorArchiveValid(state.indicatorArchive);
   }
