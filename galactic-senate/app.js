@@ -3,7 +3,7 @@
 
   const { parties } = window.senateData;
   const model = window.senateModel;
-  const { partyIds, axisLabels, constituencies, socialClasses, laws, policies, bureaus, crises, sum } = model;
+  const { partyIds, axes, constituencies, socialClasses, laws, policies, bureaus, crises, sum } = model;
   const saves = window.senateSaves;
   const byId = id => document.getElementById(id);
   const all = (root, query) => [...root.querySelectorAll(query)];
@@ -109,10 +109,6 @@
   const signs = value => value ? (value > 0 ? '+' : '−').repeat(Math.abs(value)) : '0';
   const scaleLabel = value => Math.abs(value) > 6 ? signed(value) : signs(value);
   const signClass = value => value > 0 ? 'yes' : value < 0 ? 'no' : '';
-  const readout = (effects, number = false) => entries(effects).filter(([, value]) => value).map(([id, value]) =>
-    `<span class="chip">${axisLabels[id] ?? 'По всей Республике'} <strong class="${signClass(value)}">${number ? signed(value) : scaleLabel(value)}</strong></span>`).join('');
-  const effectsReadout = effects => readout(effects) || '<span class="muted">Без изменений показателей</span>';
-  const changesReadout = changes => effectsReadout(Object.fromEntries(entries(changes).map(([id, { before, after }]) => [id, after - before])));
   const total = () => sum(Object.values(state.seats));
   const orderedParties = () => state.partyOrder ?? partyIds;
 
@@ -662,8 +658,8 @@
       ${stage.questions.length ? `<div class="crisis-grid" tabindex="0" role="group" aria-label="Вопросы кризиса">${stage.questions.map(question => {
         const decision = resolved.get(question.id);
         return `<section class="panel crisis-question">
-          <h3>${html(question.name)}</h3>
-          ${question.options.length ? `<fieldset ${open ? '' : 'disabled'}><legend>Варианты решения</legend>
+          <h3 id="crisis-question-${question.id}">${html(question.name)}</h3>
+          ${question.options.length ? `<fieldset aria-labelledby="crisis-question-${question.id}" ${open ? '' : 'disabled'}>
             <div class="choice-grid">${question.options.map(option => `<label class="choice">
               <input required type="radio" name="${question.id}" value="${option.id}" ${decision?.option === option.id ? 'checked' : ''}>
               <b>${html(option.name)}</b>
@@ -779,46 +775,15 @@
     updateProjection();
   }
 
-  function electionBreakdown(name, groups, label) {
-    return `<details class="panel report"><summary>${name}</summary>
-      <div class="table-wrap"><table class="breakdown"><thead><tr><th scope="col">Разрез</th>
-      ${partyIds.map(id => `<th scope="col" title="${html(parties[id].name)}">${dot(id)}${id === 'СГ' ? 'Гармония' : id}</th>`).join('')}</tr></thead>
-      <tbody>${entries(groups).map(([group, values]) => `<tr><th scope="row">${label(group)}</th>
-      ${partyIds.map(id => `<td>${formatPercent(values[id])}</td>`).join('')}</tr>`).join('')}</tbody>
-      </table></div></details>`;
-  }
-
-  function renderStatistics() {
-    const last = state.votes.at(-1);
-    const election = state.lastElection;
-    const current = model.electionProjection(state);
-    const breakdown = election ?? current;
-    const count = last ? sum(Object.values(last.seats)) : 0;
-    const vote = last ? `<section class="panel">
-      <div class="panel-head"><div><h3>${html(last.name)}</h3>
-        <p>Созыв № ${last.convocation} · ${last.reading === 1 ? 'I' : 'II'} чтение · ${html(parties[last.author].name)}</p></div>
-        <span class="tag ${last.status}">${statusText[last.status]}</span>
-      </div>
-      <div class="results-bar" aria-hidden="true">${entries(last.totals).map(([key, value]) =>
-        `<i class="${key}" style="width:${value / count * 100}%"></i>`).join('')}</div>
-      <div class="tally">${entries(last.totals).map(([key, value]) =>
-        `<span class="${key}">${labels[key]} <b>${value} · ${formatPercent(value / count * 100)}</b></span>`).join('')}</div>
-      <h4>${last.status === 'passed' ? 'Применённые изменения' : 'Предложенные изменения'}</h4>
-      <div class="chips">${last.status === 'passed' ? changesReadout(last.changes) : effectsReadout(last.proposed)}</div>
-      <div class="table-wrap"><table><thead><tr><th scope="col">Партия</th><th scope="col">Мандаты</th><th scope="col">Позиция</th><th scope="col">Изменение рейтинга</th></tr></thead>
-      <tbody>${entries(last.seats).map(([id, seats]) => `<tr><th scope="row">${party(id)}</th><td>${seats}</td>
-        <td>${last.positions[id] === 'abstain' ? 'Воздержалась' : labels[last.positions[id]]}</td>
-        <td><div class="chips">${readout(last.popularity[id] ?? {}, true) || '—'}</div></td></tr>`).join('')}</tbody>
-      </table></div></section>` : '<div class="panel empty">После первого голосования здесь появятся итог и позиции партий.</div>';
-    const electionReport = election ? `<section class="panel report"><h3>Выборы в созыв № ${election.convocation}</h3>
-      <div class="table-wrap"><table><thead><tr><th scope="col">Партия</th><th scope="col">Поддержка</th><th scope="col">Мандаты</th><th scope="col">Изменение мест</th><th scope="col">Получено обвинений</th></tr></thead>
-      <tbody>${partyIds.map(id => `<tr><th scope="row">${party(id)}</th><td>${formatPercent(election.popularity[id])}</td>
-        <td>${election.seats[id]}</td><td>${signed(election.seats[id] - election.oldSeats[id])}</td><td>${election.blame[id]}</td></tr>`).join('')}</tbody>
-      </table></div></section>` : '';
-    const scope = election ? 'последних выборов' : 'до следующих выборов';
-    screen.innerHTML = vote + electionReport +
-      electionBreakdown('Поддержка по секторам ' + scope, breakdown.bySector, label => html(label)) +
-      electionBreakdown('Поддержка по классам ' + scope, breakdown.byClass, key => constituencies[key]);
+  function renderIndicators() {
+    const titles = { republic: 'Республика', sector: 'Секторы', audience: 'Группы населения' };
+    screen.innerHTML = `<div class="board-grid" aria-label="Показатели Республики">${entries(axes).map(([group, indicators]) =>
+      `<section class="panel"><h3>${titles[group]}</h3>
+        <dl class="axis-list">${entries(indicators).map(([id, label]) => {
+          const value = state.indicators[id];
+          return `<div><dt>${label}</dt><dd class="${signClass(value)}">${scaleLabel(value)}</dd></div>`;
+        }).join('')}</dl>
+      </section>`).join('')}</div>`;
   }
 
   function renderSaves() {
@@ -881,10 +846,12 @@
     }
   }
 
-  const views = { senate: renderComposition, reading: renderReading, bureaus: renderBureaus, campaign: renderCampaign, statistics: renderStatistics, saves: renderSaves };
+  const views = { senate: renderComposition, reading: renderReading, bureaus: renderBureaus, campaign: renderCampaign, statistics: renderIndicators, saves: renderSaves };
   function render() {
     const hash = location.hash.slice(1);
-    const page = hash === 'crisis' ? 'bureaus' : Object.hasOwn(views, hash) ? hash : 'senate';
+    const aliases = { crisis: 'bureaus', board: 'statistics' };
+    const route = Object.hasOwn(aliases, hash) ? aliases[hash] : hash;
+    const page = Object.hasOwn(views, route) ? route : 'senate';
     for (const link of all(document, '.navigation a, .saves-link')) {
       if (link.hash === '#' + page) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
