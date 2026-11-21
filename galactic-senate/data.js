@@ -251,6 +251,7 @@ window.senateData = {
       "Sys_Ондерон": 0
     },
     "ВН": {
+      "Sys_Родия": -5,
       "Rich": 1,
       "Relig": 0,
       "Worker": 0,
