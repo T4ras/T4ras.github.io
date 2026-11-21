@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const { partyIds, axisLabels, constituencies, socialClasses, laws, bureaus, crises, initialState, governmentMembers, sum } = window.senateModel;
+  const { rodia, rodiaAxis, partyIds, axisLabels, constituencies, socialClasses, laws, bureaus, crises, initialState, governmentMembers, sum } = window.senateModel;
   const { systems, seats, convocation } = window.senateData;
   const { retiredAxes } = window.senateCatalog;
   const storageKey = 'new-republic-senate-v3';
@@ -10,9 +10,12 @@
   const fileVersion = 4;
   const slotCount = 3;
   const axisIds = Object.keys(axisLabels);
-  const previousAxes = [...axisIds, ...Object.keys(retiredAxes)];
-  const constituencyIds = [...Object.keys(constituencies), 'general'];
+  const optionalAxes = [...axisIds, rodiaAxis];
+  const previousAxes = [...optionalAxes, ...Object.keys(retiredAxes)];
+  const constituencyIds = [...Object.keys(constituencies), rodiaAxis, 'general'];
   const systemNames = systems.map(system => system.name);
+  const sectorShares = value => dictionary(value, [...systemNames, rodia.name], shares) &&
+    systemNames.every(system => Object.hasOwn(value, system));
   const statuses = ['passed', 'rejected', 'second'];
   const positions = ['yes', 'no', 'abstain'];
   const lawIds = laws.map(law => law.id);
@@ -32,9 +35,9 @@
 
   const scores = value => dictionary(value, constituencyIds, score =>
     Number.isFinite(score) && Math.abs(score) <= Number.MAX_SAFE_INTEGER);
-  const effects = value => dictionary(value, axisIds, integer);
+  const effects = value => dictionary(value, optionalAxes, integer);
   const isChange = change => object(change) && integer(change.before) && integer(change.after);
-  const changes = value => dictionary(value, axisIds, isChange);
+  const changes = value => dictionary(value, optionalAxes, isChange);
   const seatMap = value => dictionary(value, partyIds, nonnegative, true) && sum(Object.values(value)) === seatCount;
   const shares = value => dictionary(value, partyIds, percent => Number.isFinite(percent) && percent >= 0 && percent <= 100, true);
 
@@ -60,9 +63,9 @@
     return election === null || (object(election) &&
       roundNumber(election.convocation) && seatMap(election.oldSeats) && seatMap(election.seats) &&
       shares(election.popularity) && dictionary(election.blame, partyIds, nonnegative, true) &&
-      dictionary(election.bySector, systemNames, shares, true) && dictionary(election.byClass, socialClasses, shares, true) &&
+      sectorShares(election.bySector) && dictionary(election.byClass, socialClasses, shares, true) &&
       (election.baseline === undefined || (object(election.baseline) && shares(election.baseline.popularity) &&
-        dictionary(election.baseline.bySector, systemNames, shares, true) && dictionary(election.baseline.byClass, socialClasses, shares, true))) &&
+        sectorShares(election.baseline.bySector) && dictionary(election.baseline.byClass, socialClasses, shares, true))) &&
       (election.coalition === undefined || (Array.isArray(election.coalition) && election.coalition.every(allowed(partyIds)))));
   }
 
@@ -93,12 +96,14 @@
 
   function stateValid(state) {
     return object(state) && roundNumber(state.convocation) && seatMap(state.seats) && partyOrderValid(state.partyOrder) &&
-      dictionary(state.indicators, axisIds, integer, true) && dictionary(state.modifiers, partyIds, scores, true) &&
+      dictionary(state.indicators, optionalAxes, integer) && axisIds.every(id => Object.hasOwn(state.indicators, id)) && dictionary(state.modifiers, partyIds, scores, true) &&
       dictionary(state.bills, lawIds, allowed(statuses)) && Array.isArray(state.votes) && state.votes.every(voteValid) &&
       governmentValid(state.government) &&
       (state.dissolvedGovernment === undefined || governmentValid(state.dissolvedGovernment)) &&
       (state.alienMultiplier === undefined || (Number.isFinite(state.alienMultiplier) && state.alienMultiplier >= 1)) &&
       (state.crisisOnsetConvocation === undefined || (roundNumber(state.crisisOnsetConvocation) && state.crisisOnsetConvocation <= state.convocation)) &&
+      (state.rodiaLiberators === undefined || (Array.isArray(state.rodiaLiberators) &&
+        new Set(state.rodiaLiberators).size === state.rodiaLiberators.length && state.rodiaLiberators.every(allowed(partyIds)))) &&
       (state.dissolvedCoalition === undefined || (Array.isArray(state.dissolvedCoalition) && state.dissolvedCoalition.every(allowed(partyIds)))) &&
       typeof state.snapElection === 'boolean' && electionValid(state.lastElection) &&
       knownStage(state.crisisStage) && (state.nextCrisisStage === null || knownStage(state.nextCrisisStage)) &&

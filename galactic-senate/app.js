@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const { parties, systems } = window.senateData;
+  const { parties } = window.senateData;
   const model = window.senateModel;
   const { partyIds, axes, constituencies, socialClasses, laws, policies, bureaus, crises, sum } = model;
   const saves = window.senateSaves;
@@ -695,7 +695,7 @@
             <input id="senate-votes" type="number" min="0" max="${total()}" step="1" aria-describedby="senate-threshold" disabled>
             <span id="senate-threshold">Для начала переговоров нужно ${threshold} голосов.</span></label>` : ''}
           ${!state.snapElection && question.id === 'accession' && accession?.senateVotes !== undefined ? `<p class="lead">За переговоры ${accession.senateVotes} из ${total()}.
-            ${accession.passed ? 'Переговоры одобрены.' : 'Порог голосов не достигнут.'}</p>` : ''}
+            ${accession.passed ? 'Переговоры одобрены. Родия вошла в состав Республики.' : 'Порог голосов не достигнут.'}</p>` : ''}
         </section>`;
       }).join('')}</div>` : ''}
         </form>
@@ -831,7 +831,7 @@
   }
 
   function renderPopularity(projection, prefix = '', baseline = {}) {
-    const sectorGroups = systems.map(({ name }) => ({
+    const sectorGroups = Object.keys(projection.bySector).map(name => ({
       name, image: './assets/' + encodeURIComponent(name) + '.png', shares: projection.bySector[name], baseline: baseline.bySector?.[name]
     }));
     const classGroups = socialClasses.map(id => ({
@@ -1009,6 +1009,8 @@
   function renderIndicators(root = screen, readOnly = false) {
     const editing = !readOnly && indicatorsUnlocked;
     const historyVisible = !readOnly && showIndicatorHistory;
+    const groups = Object.hasOwn(state.indicators, model.rodiaAxis)
+      ? { ...axes, sector: { ...axes.sector, [model.rodiaAxis]: model.rodia.name } } : axes;
     const titles = { republic: 'Республика', sector: 'Секторы', audience: 'Группы населения' };
     const history = historyVisible ? model.indicatorHistory(state) : [];
     const types = { bill: 'Законопроект', policy: 'Политика Бюро', crisis: 'Кризис' };
@@ -1028,7 +1030,7 @@
         <span aria-hidden="true">${indicatorsUnlocked ? '🔓' : '🔒'}</span>
       </button>
     </div>`;
-    root.innerHTML = `${toolbar}<div class="board-grid" aria-label="Показатели Республики">${entries(axes).map(([group, indicators]) =>
+    root.innerHTML = `${toolbar}<div class="board-grid" aria-label="Показатели Республики">${entries(groups).map(([group, indicators]) =>
       `<section class="panel"><h3>${titles[group]}</h3>
         <dl class="axis-list">${entries(indicators).map(([id, label]) => {
           const value = state.indicators[id];
@@ -1137,7 +1139,9 @@
 
   const views = { senate: renderComposition, reading: renderReading, bureaus: renderBureaus, campaign: renderCampaign, statistics: renderIndicators, saves: renderSaves };
   function render() {
-    if (model.startCrisis(state)) {
+    const crisisStarted = model.startCrisis(state);
+    const rodiaAdmitted = model.syncRodia(state);
+    if (crisisStarted || rodiaAdmitted) {
       saves.commit(archive, state, false);
       storageAvailable = persist();
     }

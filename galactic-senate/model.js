@@ -7,6 +7,11 @@
   const axisLabels = Object.assign({}, ...Object.values(axes));
   const constituencies = { ...axes.audience, ...axes.sector };
   const socialClasses = Object.keys(systems[0].classes);
+  const rodia = {
+    name: 'Родия', weight: systems.find(system => system.name === 'Орд-Мантел').weight, human: .1,
+    classes: { Middle: .3, Farmer: .3, Self: .2, Rich: .2 / 3, Relig: .2 / 3, Worker: .2 / 3 }
+  };
+  const rodiaAxis = 'Sys_Родия';
   const laws = items.filter(item => item.bureau === undefined);
   const policies = items.filter(item => item.bureau !== undefined);
   const bureaus = [
@@ -45,7 +50,7 @@
   function updateSupport(modifiers, id, effects, strength, allGroups = false) {
     const changes = {};
     for (const [key, sign] of entries(effects)) {
-      if (!sign || !Object.hasOwn(constituencies, key)) continue;
+      if (!sign || (!Object.hasOwn(constituencies, key) && key !== rodiaAxis)) continue;
       changes[key] = sign * strength;
     }
     if (allGroups) changes.general = strength;
@@ -209,7 +214,8 @@
       const option = selected[index];
       const passed = !option.senateVote || 3 * senateVotes >= 2 * total;
       const effects = passed ? { ...option.effects } : {};
-      if (stage === 'I' && option.id === 'send') {
+      if (stage === 'I' && question.id === 'fleet' && option.id === 'send') {
+        state.rodiaLiberators = [...(state.government?.members ?? [])];
         effects.image = army >= 2 ? 1 : -1;
       }
       const changes = applyEffects(state, effects);
@@ -217,6 +223,28 @@
       const vote = option.senateVote ? { senateVotes, passed } : {};
       state.crisisLog.push({ stage, question: question.id, option: option.id, changes, ...vote });
     }
+    syncRodia(state);
+    return true;
+  }
+
+  function syncRodia(state) {
+    if (Object.hasOwn(state.indicators, rodiaAxis)) return false;
+    const archive = state.indicatorArchive ?? [];
+    const accession = crises['II-A'].questions.find(question => question.id === 'accession');
+    const negotiate = accession.options.find(option => option.id === 'negotiate');
+    const approved = state.crisisLog.some(entry => entry.stage === 'II-A' && entry.question === 'accession' &&
+      entry.option === 'negotiate' && entry.passed) || archive.some(entry => entry.type === 'crisis' &&
+      entry.name === negotiate.name && entry.effects.Bonus_Alien > 0);
+    if (!approved) return false;
+
+    const fleet = crises.I.questions.find(question => question.id === 'fleet');
+    const send = fleet.options.find(option => option.id === 'send');
+    const liberation = archive.find(entry => entry.type === 'crisis' && entry.name === send.name);
+    // Earlier saves retained the crisis decision and cabinet policies in indicator history.
+    const liberators = state.rodiaLiberators ?? partyIds.filter(id => archive.some(entry => entry.type === 'policy' &&
+      entry.convocation === liberation?.convocation && entry.source.endsWith(' · ' + parties[id].name)));
+    state.indicators[rodiaAxis] = 0;
+    for (const id of liberators) state.modifiers[id][rodiaAxis] = (state.modifiers[id][rodiaAxis] ?? 0) + 2;
     return true;
   }
 
@@ -288,7 +316,7 @@
     return { modifiers, blame };
   }
 
-  function voteShares(modifiers, alienMultiplier = 1) {
+  function voteShares(modifiers, { indicators = {}, alienMultiplier = 1 } = {}) {
     const bySector = {};
     const classTotals = record(socialClasses.map(key => [key, record(partyIds.map(id => [id, 0]))]));
     const totals = record(partyIds.map(id => [id, 0]));
@@ -296,14 +324,15 @@
       const total = sum(Object.values(votes));
       return record(entries(votes).map(([id, score]) => [id, total ? score / total * 100 : 0]));
     };
-    for (const system of systems) {
-      const alienShare = Math.min(1, (1 - system.human) * alienMultiplier);
+    const activeSystems = Object.hasOwn(indicators, rodiaAxis) ? [...systems, rodia] : systems;
+    for (const system of activeSystems) {
+      const alienShare = system === rodia ? 1 - rodia.human : Math.min(1, (1 - system.human) * alienMultiplier);
       const humanShare = 1 - alienShare;
       const sector = 'Sys_' + system.name.replace('-', '');
       const sectorVotes = {};
       for (const id of partyIds) {
         const base = bonuses[id];
-        const bonus = key => base[key] + (modifiers[id][key] ?? 0);
+        const bonus = key => (base[key] ?? 0) + (modifiers[id][key] ?? 0);
         const general = bonus(sector) + bonus('Bonus_Human') * humanShare +
           bonus('Bonus_Alien') * alienShare + (modifiers[id].general ?? 0);
         sectorVotes[id] = 0;
@@ -322,14 +351,15 @@
   function electionProjection(state, answers = {}, adjustments = {}) {
     const { modifiers, blame } = campaignModifiers(state, answers);
     const keys = [...socialClasses, ...Object.keys(axes.sector)];
+    if (Object.hasOwn(state.indicators, rodiaAxis)) keys.push(rodiaAxis);
     for (const [id, steps] of entries(adjustments)) {
       for (const key of keys) {
         const previous = modifiers[id][key] ?? 0;
-        const rating = bonuses[id][key] + previous;
+        const rating = (bonuses[id][key] ?? 0) + previous;
         if (rating > 0 && steps) modifiers[id][key] = previous + rating * (Math.max(-10, steps) / 10);
       }
     }
-    const support = voteShares(modifiers, state.alienMultiplier);
+    const support = voteShares(modifiers, state);
     return { ...support, blame, modifiers, seats: allocateSeats(state.seats, support.popularity) };
   }
 
@@ -401,7 +431,7 @@
   }
 
   window.senateModel = {
-    partyIds, axes, axisLabels, constituencies, socialClasses, laws, policies, bureaus, crises, supportScale,
+    rodia, rodiaAxis, syncRodia, partyIds, axes, axisLabels, constituencies, socialClasses, laws, policies, bureaus, crises, supportScale,
     initialState, tally, recordVote, governmentMembers, acceptGovernment, startCrisis, crisisBranches, chooseCrisis, resolveCrises, dissolveGovernment, electionCoalition, indicatorHistory, electionProjection, electionBaseline, canCampaign, replayVotes, finishElection, sum
   };
 })();
